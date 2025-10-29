@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FreightHub</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Экран загрузки -->
+        <div id="loading-screen" class="screen">
+            <div class="loading-container">
+                <div class="logo">🚛</div>
+                <h1>FreightHub</h1>
+                <div class="spinner"></div>
+                <p>Загрузка...</p>
+            </div>
+        </div>
+
+        <!-- Экран регистрации -->
+        <div id="registration-screen" class="screen hidden">
+            <div class="container">
+                <div class="logo-section">
+                    <div class="logo">🚛</div>
+                    <h1>FreightHub</h1>
+                    <p class="subtitle">Сервис грузоперевозок</p>
+                </div>
+
+                <div class="registration-form">
+                    <h2>Регистрация</h2>
+                    <p class="description">Выберите вашу роль:</p>
+
+                    <div class="role-buttons">
+                        <button class="role-btn" data-role="customer">
+                            <div class="role-icon">📦</div>
+                            <div class="role-title">Заказчик</div>
+                            <div class="role-desc">Создавайте заявки на грузоперевозки</div>
+                        </button>
+
+                        <button class="role-btn" data-role="driver">
+                            <div class="role-icon">🚛</div>
+                            <div class="role-title">Водитель</div>
+                            <div class="role-desc">Получайте заказы и зарабатывайте</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Главный экран приложения -->
+        <div id="main-screen" class="screen hidden">
+            <!-- Заголовок -->
+            <header class="header">
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar">👤</div>
+                    <div class="user-details">
+                        <div class="user-name" id="user-name">Пользователь</div>
+                        <div class="user-role" id="user-role">Заказчик</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Вкладки навигации -->
+            <nav class="tabs" id="tabs-nav">
+                <!-- Вкладки добавляются динамически в зависимости от роли -->
+            </nav>
+
+            <!-- Контент вкладок -->
+            <div class="tab-content" id="tab-content">
+                <!-- Контент добавляется динамически -->
+            </div>
+
+            <!-- Кнопка создания заявки (для заказчиков) -->
+            <button class="fab" id="create-order-btn">
+                <span class="fab-icon">+</span>
+            </button>
+        </div>
+
+        <!-- Модальное окно создания заявки -->
+        <div id="create-order-modal" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Создать заявку</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="create-order-form">
+                        <div class="form-group">
+                            <label>Тип грузовика</label>
+                            <select id="truck-type" required>
+                                <option value="">Выберите тип</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Откуда</label>
+                            <input type="text" id="pickup-location" placeholder="Адрес загрузки" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Куда</label>
+                            <input type="text" id="delivery-location" placeholder="Адрес выгрузки" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Описание груза</label>
+                            <textarea id="description" rows="3" placeholder="Что нужно перевезти" required></textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Вес (кг)</label>
+                                <input type="number" id="cargo-weight" placeholder="Необязательно">
+                            </div>
+                            <div class="form-group">
+                                <label>Объем (м³)</label>
+                                <input type="number" id="cargo-volume" step="0.1" placeholder="Необязательно">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Желаемая цена (руб)</label>
+                            <input type="number" id="price" placeholder="Необязательно">
+                        </div>
+
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary" id="cancel-order">Отмена</button>
+                            <button type="submit" class="btn btn-primary">Создать</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно предложения (для водителей) -->
+        <div id="create-bid-modal" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Сделать предложение</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="bid-order-info" class="order-info-card">
+                        <!-- Информация о заказе -->
+                    </div>
+                    <form id="create-bid-form">
+                        <div class="form-group">
+                            <label>Ваша цена (руб)</label>
+                            <input type="number" id="bid-price" min="1" required>
+                        </div>
+
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary" id="cancel-bid">Отмена</button>
+                            <button type="submit" class="btn btn-primary">Отправить</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно просмотра предложений -->
+        <div id="view-bids-modal" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Предложения</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="bids-list">
+                        <!-- Список предложений -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

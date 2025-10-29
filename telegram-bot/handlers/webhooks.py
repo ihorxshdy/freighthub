@@ -1,0 +1,189 @@
+"""
+Обработчики webhook запросов от webapp
+"""
+from aiogram import Router, Bot
+from aiogram.types import Update
+from aiohttp import web
+import os
+import json
+from utils.notifications import (
+    notify_drivers_new_order,
+    notify_auction_winner,
+    notify_auction_losers,
+    notify_customer_no_bids,
+    notify_customer_auction_complete
+)
+from utils.helpers import logger
+
+router = Router()
+
+# Секретный ключ для валидации webhook запросов
+WEBHOOK_SECRET = os.getenv('WEBHOOK_SECRET', 'change-this-secret-key')
+
+
+async def verify_webhook_token(request):
+    """Проверка токена авторизации"""
+    auth_header = request.headers.get('Authorization', '')
+    expected = f'Bearer {WEBHOOK_SECRET}'
+    return auth_header == expected
+
+
+async def webhook_new_order(request):
+    """
+    Webhook: новая заявка создана
+    
+    Ожидаемые данные:
+    {
+        "order_id": 123,
+        "truck_type": "gazel_tent_3m",
+        "cargo_description": "Мебель для переезда",
+        "delivery_address": "ул. Ленина, д. 10",
+        "max_price": 5000.0
+    }
+    """
+    if not await verify_webhook_token(request):
+        return web.json_response({'error': 'Unauthorized'}, status=401)
+    
+    try:
+        data = await request.json()
+        bot = request.app['bot']
+        
+        # Валидация данных
+        required = ['order_id', 'truck_type', 'cargo_description', 'delivery_address', 'max_price']
+        if not all(field in data for field in required):
+            return web.json_response({'error': 'Missing required fields'}, status=400)
+        
+        # Отправляем уведомление всем водителям
+        count = await notify_drivers_new_order(
+            bot=bot,
+            order_id=data['order_id'],
+            truck_type=data['truck_type'],
+            cargo_description=data['cargo_description'],
+            delivery_address=data['delivery_address'],
+            max_price=float(data['max_price'])
+        )
+        
+        logger.info(f"Webhook: Отправлены уведомления о заявке #{data['order_id']} ({count} водителей)")
+        
+        return web.json_response({
+            'success': True,
+            'notified_drivers': count
+        })
+        
+    except Exception as e:
+        logger.error(f"Ошибка обработки webhook new_order: {e}")
+        return web.json_response({'error': str(e)}, status=500)
+
+
+async def webhook_auction_complete(request):
+    """
+    Webhook: аукцион завершён с победителем
+    
+    Ожидаемые данные:
+    {
+        "order_id": 123,
+        "winner_user_id": 45,
+        "winning_price": 4500.0,
+        "cargo_description": "Мебель для переезда",
+        "delivery_address": "ул. Ленина, д. 10",
+        "customer_user_id": 12,
+        "customer_phone": "+79991234567",
+        "driver_phone": "+79997654321"
+    }
+    """
+    if not await verify_webhook_token(request):
+        return web.json_response({'error': 'Unauthorized'}, status=401)
+    
+    try:
+        data = await request.json()
+        bot = request.app['bot']
+        
+        # Уведомляем победителя
+        await notify_auction_winner(
+            bot=bot,
+            order_id=data['order_id'],
+            winner_user_id=data['winner_user_id'],
+            winning_price=float(data['winning_price']),
+            cargo_description=data['cargo_description'],
+            delivery_address=data['delivery_address'],
+            customer_phone=data['customer_phone']
+        )
+        
+        # Уведомляем проигравших
+        await notify_auction_losers(
+            bot=bot,
+            order_id=data['order_id'],
+            winner_user_id=data['winner_user_id'],
+            cargo_description=data['cargo_description']
+        )
+        
+        # Уведомляем заказчика
+        await notify_customer_auction_complete(
+            bot=bot,
+            order_id=data['order_id'],
+            customer_user_id=data['customer_user_id'],
+            cargo_description=data['cargo_description'],
+            winning_price=float(data['winning_price']),
+            driver_phone=data['driver_phone']
+        )
+        
+        logger.info(f"Webhook: Аукцион #{data['order_id']} завершён, победитель {data['winner_user_id']}")
+        
+        return web.json_response({'success': True})
+        
+    except Exception as e:
+        logger.error(f"Ошибка обработки webhook auction_complete: {e}")
+        return web.json_response({'error': str(e)}, status=500)
+
+
+async def webhook_auction_no_bids(request):
+    """
+    Webhook: аукцион завершён без ставок
+    
+    Ожидаемые данные:
+    {
+        "order_id": 123,
+        "customer_user_id": 12,
+        "cargo_description": "Мебель для переезда"
+    }
+    """
+    if not await verify_webhook_token(request):
+        return web.json_response({'error': 'Unauthorized'}, status=401)
+    
+    try:
+        data = await request.json()
+        bot = request.app['bot']
+        
+        # Уведомляем заказчика
+        await notify_customer_no_bids(
+            bot=bot,
+            order_id=data['order_id'],
+            customer_user_id=data['customer_user_id'],
+            cargo_description=data['cargo_description']
+        )
+        
+        logger.info(f"Webhook: Аукцион #{data['order_id']} завершён без ставок")
+        
+        return web.json_response({'success': True})
+        
+    except Exception as e:
+        logger.error(f"Ошибка обработки webhook auction_no_bids: {e}")
+        return web.json_response({'error': str(e)}, status=500)
+
+
+async def webhook_health(request):
+    """Проверка здоровья webhook сервера"""
+    return web.json_response({
+        'status': 'ok',
+        'service': 'telegram-bot-webhooks'
+    })
+
+
+def setup_webhook_handlers(app, bot: Bot):
+    """Настройка обработчиков webhook"""
+    app['bot'] = bot
+    app.router.add_post('/webhook/new-order', webhook_new_order)
+    app.router.add_post('/webhook/auction-complete', webhook_auction_complete)
+    app.router.add_post('/webhook/auction-no-bids', webhook_auction_no_bids)
+    app.router.add_get('/webhook/health', webhook_health)
+    logger.info("Webhook handlers настроены")

@@ -1,0 +1,70 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Позволяет запускать вручную
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Deploy to server
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+        run: |
+          # Настройка SSH
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
+          
+          # Синхронизация файлов с сервером
+          rsync -avz --delete \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'venv' \
+            --exclude '__pycache__' \
+            --exclude '*.pyc' \
+            --exclude '.DS_Store' \
+            --exclude 'database' \
+            --exclude '.env' \
+            ./ $SERVER_USER@$SERVER_HOST:/opt/freighthub/
+          
+          # Создание .env файла на сервере
+          ssh $SERVER_USER@$SERVER_HOST "cat > /opt/freighthub/.env << 'EOF'
+BOT_TOKEN=$BOT_TOKEN
+WEBAPP_URL=http://$SERVER_HOST
+TELEGRAM_BOT_WEBHOOK_URL=http://telegram-bot:8080
+WEBHOOK_SECRET=$WEBHOOK_SECRET
+DATABASE_PATH=/app/database/delivery.db
+SERVER_HOST=$SERVER_HOST
+WEBHOOK_PORT=8080
+EOF"
+          
+          # Перезапуск контейнеров
+          ssh $SERVER_USER@$SERVER_HOST << 'ENDSSH'
+            cd /opt/freighthub
+            docker-compose down
+            docker-compose build --no-cache
+            docker-compose up -d
+            
+            # Проверка статуса
+            echo "🔍 Проверка статуса сервисов..."
+            sleep 5
+            docker-compose ps
+            
+            echo "📋 Логи запуска:"
+            docker-compose logs --tail=50
+ENDSSH
+          
+          echo "✅ Деплой завершен!"

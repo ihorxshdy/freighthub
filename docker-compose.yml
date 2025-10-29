@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # База данных (общая для всех)
+  database:
+    image: alpine:latest
+    command: tail -f /dev/null
+    volumes:
+      - ./database:/app/database
+    restart: always
+
+  # Telegram Bot
+  telegram-bot:
+    build: ./telegram-bot
+    container_name: freighthub-bot
+    restart: always
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./database:/app/database
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - WEBAPP_URL=${WEBAPP_URL}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - DATABASE_PATH=/app/database/delivery.db
+      - WEBHOOK_PORT=8080
+    depends_on:
+      - database
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8080/webhook/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # WebApp
+  webapp:
+    build: ./webapp
+    container_name: freighthub-webapp
+    restart: always
+    ports:
+      - "80:5000"
+    volumes:
+      - ./database:/app/database
+    environment:
+      - TELEGRAM_BOT_WEBHOOK_URL=http://telegram-bot:8080
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - DATABASE_PATH=/app/database/delivery.db
+    depends_on:
+      - telegram-bot
+      - database
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/debug/db-info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Auction Checker (Background Worker)
+  auction-checker:
+    build: ./webapp
+    container_name: freighthub-auction-checker
+    restart: always
+    command: python auction_checker.py
+    volumes:
+      - ./database:/app/database
+    environment:
+      - TELEGRAM_BOT_WEBHOOK_URL=http://telegram-bot:8080
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - DATABASE_PATH=/app/database/delivery.db
+    depends_on:
+      - telegram-bot
+      - webapp
+      - database
+
+volumes:
+  database:
+
+networks:
+  default:
+    name: freighthub-network
