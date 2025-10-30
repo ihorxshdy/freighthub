@@ -48,10 +48,15 @@ async def webhook_new_order(request):
         data = await request.json()
         bot = request.app['bot']
         
-        # Валидация данных
-        required = ['order_id', 'truck_type', 'cargo_description', 'delivery_address', 'max_price']
+        # Валидация обязательных данных
+        required = ['order_id', 'truck_type', 'cargo_description', 'delivery_address']
         if not all(field in data for field in required):
             return web.json_response({'error': 'Missing required fields'}, status=400)
+        
+        # max_price может отсутствовать или быть None
+        max_price = data.get('max_price')
+        if max_price is not None:
+            max_price = float(max_price) if max_price else None
         
         # Отправляем уведомление всем водителям
         count = await notify_drivers_new_order(
@@ -60,7 +65,7 @@ async def webhook_new_order(request):
             truck_type=data['truck_type'],
             cargo_description=data['cargo_description'],
             delivery_address=data['delivery_address'],
-            max_price=float(data['max_price'])
+            max_price=max_price
         )
         
         logger.info(f"Webhook: Отправлены уведомления о заявке #{data['order_id']} ({count} водителей)")

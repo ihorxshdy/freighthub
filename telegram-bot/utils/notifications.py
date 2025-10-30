@@ -7,7 +7,9 @@ from bot.config import get_truck_display_name
 from bot.webapp_config import WEBAPP_URL
 
 
-async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, cargo_description: str, delivery_address: str, max_price: float):
+from typing import Optional
+
+async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, cargo_description: str, delivery_address: str, max_price: Optional[float] = None):
     """
     Уведомляет всех водителей о новой заявке
     
@@ -17,18 +19,21 @@ async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, car
         truck_type: Тип машины
         cargo_description: Описание груза
         delivery_address: Адрес доставки
-        max_price: Максимальная цена
+        max_price: Максимальная цена (может быть None)
     """
     drivers = await get_all_drivers()
     truck_name = get_truck_display_name(truck_type)
+    
+    # Формируем текст сообщения
+    price_text = f"**Максимальная цена:** {max_price} руб.\n" if max_price else ""
     
     message_text = (
         f"🚚 **Новая заявка #{order_id}**\n\n"
         f"**Тип машины:** {truck_name}\n"
         f"**Груз:** {cargo_description}\n"
         f"**Адрес доставки:** {delivery_address}\n"
-        f"**Максимальная цена:** {max_price} руб.\n\n"
-        f"⏱ Аукцион длится 5 минут!\n"
+        f"{price_text}"
+        f"⏱ Аукцион длится 30 минут!\n"
         f"Откройте приложение для участия 👇"
     )
     
