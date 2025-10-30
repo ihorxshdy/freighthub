@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-DB_PATH = os.getenv("DB_PATH", "database/delivery.db")
+DB_PATH = os.getenv("DATABASE_PATH", "database/data/delivery.db")
 AUCTION_DURATION = int(os.getenv("AUCTION_DURATION", 300))  # 5 минут (300 секунд)
 
 # Иерархические типы машин для грузоперевозок
