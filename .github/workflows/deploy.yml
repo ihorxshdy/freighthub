@@ -36,7 +36,8 @@ jobs:
             --exclude '__pycache__' \
             --exclude '*.pyc' \
             --exclude '.DS_Store' \
-            --exclude 'database' \
+            --exclude 'database/*.db' \
+            --exclude 'database/*.sqlite' \
             --exclude '.env' \
             ./ $SERVER_USER@$SERVER_HOST:/opt/freighthub/
           

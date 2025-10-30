@@ -55,7 +55,8 @@ ssh -i ${SSH_KEY} ${SERVER_USER}@${SERVER_HOST} "mkdir -p ${SERVER_PATH}"
 echo -e "${GREEN}📦 Copying files to server...${NC}"
 rsync -avz --progress \
     -e "ssh -i ${SSH_KEY}" \
-    --exclude 'database/' \
+    --exclude 'database/*.db' \
+    --exclude 'database/*.sqlite' \
     --exclude 'venv/' \
     --exclude '__pycache__/' \
     --exclude '*.pyc' \
