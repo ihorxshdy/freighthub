@@ -41,31 +41,25 @@ jobs:
             ./ $SERVER_USER@$SERVER_HOST:/opt/freighthub/
           
           # Создание .env файла на сервере
-          ssh $SERVER_USER@$SERVER_HOST "cat > /opt/freighthub/.env <<EOF
-BOT_TOKEN=$BOT_TOKEN
-WEBAPP_URL=http://$SERVER_HOST
-TELEGRAM_BOT_WEBHOOK_URL=http://telegram-bot:8080
-WEBHOOK_SECRET=$WEBHOOK_SECRET
-DATABASE_PATH=/app/database/delivery.db
-SERVER_HOST=$SERVER_HOST
-WEBHOOK_PORT=8080
-EOF
-"
+          ssh $SERVER_USER@$SERVER_HOST "echo 'BOT_TOKEN=$BOT_TOKEN' > /opt/freighthub/.env"
+          ssh $SERVER_USER@$SERVER_HOST "echo 'WEBAPP_URL=http://$SERVER_HOST' >> /opt/freighthub/.env"
+          ssh $SERVER_USER@$SERVER_HOST "echo 'TELEGRAM_BOT_WEBHOOK_URL=http://telegram-bot:8080' >> /opt/freighthub/.env"
+          ssh $SERVER_USER@$SERVER_HOST "echo 'WEBHOOK_SECRET=$WEBHOOK_SECRET' >> /opt/freighthub/.env"
+          ssh $SERVER_USER@$SERVER_HOST "echo 'DATABASE_PATH=/app/database/delivery.db' >> /opt/freighthub/.env"
+          ssh $SERVER_USER@$SERVER_HOST "echo 'SERVER_HOST=$SERVER_HOST' >> /opt/freighthub/.env"
+          ssh $SERVER_USER@$SERVER_HOST "echo 'WEBHOOK_PORT=8080' >> /opt/freighthub/.env"
           
           # Перезапуск контейнеров
-          ssh $SERVER_USER@$SERVER_HOST <<'ENDSSH'
-            cd /opt/freighthub
-            docker-compose down
-            docker-compose build --no-cache
-            docker-compose up -d
-            
-            # Проверка статуса
-            echo "🔍 Проверка статуса сервисов..."
-            sleep 5
-            docker-compose ps
-            
-            echo "📋 Логи запуска:"
-            docker-compose logs --tail=50
-ENDSSH
+          ssh $SERVER_USER@$SERVER_HOST "cd /opt/freighthub && docker-compose down"
+          ssh $SERVER_USER@$SERVER_HOST "cd /opt/freighthub && docker-compose build --no-cache"
+          ssh $SERVER_USER@$SERVER_HOST "cd /opt/freighthub && docker-compose up -d"
+          
+          # Проверка статуса
+          echo "🔍 Проверка статуса сервисов..."
+          sleep 5
+          ssh $SERVER_USER@$SERVER_HOST "cd /opt/freighthub && docker-compose ps"
+          
+          echo "📋 Логи запуска:"
+          ssh $SERVER_USER@$SERVER_HOST "cd /opt/freighthub && docker-compose logs --tail=50"
           
           echo "✅ Деплой завершен!"
