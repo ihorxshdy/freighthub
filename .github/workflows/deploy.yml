@@ -29,7 +29,7 @@ jobs:
           ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
           
           # Синхронизация файлов с сервером
-          rsync -avz --delete \
+          rsync -avz \
             --exclude '.git' \
             --exclude '.github' \
             --exclude 'venv' \
@@ -40,6 +40,10 @@ jobs:
             --exclude '*.sqlite' \
             --exclude '.env' \
             ./ $SERVER_USER@$SERVER_HOST:/opt/freighthub/
+          
+          # Явно копируем Python файлы из database (они важны!)
+          rsync -avz telegram-bot/database/*.py $SERVER_USER@$SERVER_HOST:/opt/freighthub/telegram-bot/database/
+          rsync -avz webapp/database/*.py $SERVER_USER@$SERVER_HOST:/opt/freighthub/webapp/database/ 2>/dev/null || true
           
           # Создание .env файла на сервере
           ssh $SERVER_USER@$SERVER_HOST "echo 'BOT_TOKEN=$BOT_TOKEN' > /opt/freighthub/.env"
