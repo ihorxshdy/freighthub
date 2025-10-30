@@ -166,7 +166,7 @@ def get_customer_orders():
     orders = conn.execute(
         '''SELECT o.*, 
                   COUNT(DISTINCT b.id) as bids_count,
-                  MIN(b.bid_amount) as min_bid_price
+                  MIN(b.price) as min_bid_price
            FROM orders o
            LEFT JOIN bids b ON o.id = b.order_id AND b.status = 'pending'
            WHERE o.customer_id = ?
@@ -340,7 +340,7 @@ def get_driver_orders():
     open_orders = conn.execute(
         '''SELECT o.*, 
                   COUNT(DISTINCT b.id) as bids_count,
-                  MIN(b.bid_amount) as min_bid_price
+                  MIN(b.price) as min_bid_price
            FROM orders o
            LEFT JOIN bids b ON o.id = b.order_id AND b.status = 'pending'
            WHERE o.status = 'active'
@@ -355,9 +355,9 @@ def get_driver_orders():
     
     # Заявки с предложениями от водителя
     my_bids_orders = conn.execute(
-        '''SELECT o.*, b.bid_amount as my_bid_price, b.id as bid_id,
+        '''SELECT o.*, b.price as my_bid_price, b.id as bid_id,
                   COUNT(DISTINCT b2.id) as total_bids,
-                  MIN(b2.bid_amount) as min_bid_price
+                  MIN(b2.price) as min_bid_price
            FROM orders o
            JOIN bids b ON o.id = b.order_id
            LEFT JOIN bids b2 ON o.id = b2.order_id AND b2.status = 'pending'
@@ -371,7 +371,7 @@ def get_driver_orders():
     
     # Выигранные заявки
     won_orders = conn.execute(
-        '''SELECT o.*, b.bid_amount as my_bid_price
+        '''SELECT o.*, b.price as my_bid_price
            FROM orders o
            JOIN bids b ON o.id = b.order_id
            WHERE b.driver_id = ? 
@@ -382,7 +382,7 @@ def get_driver_orders():
     
     # Закрытые заявки
     closed_orders = conn.execute(
-        '''SELECT o.*, b.bid_amount as my_bid_price, b.status as bid_status
+        '''SELECT o.*, b.price as my_bid_price, b.status as bid_status
            FROM orders o
            LEFT JOIN bids b ON o.id = b.order_id AND b.driver_id = ?
            WHERE (o.status = 'completed' OR o.status = 'cancelled')
@@ -438,7 +438,7 @@ def create_bid():
     
     # Создаем предложение
     cursor = conn.execute(
-        '''INSERT INTO bids (order_id, driver_id, bid_amount, status, created_at)
+        '''INSERT INTO bids (order_id, driver_id, price, status, created_at)
            VALUES (?, ?, ?, ?, ?)''',
         (
             data['order_id'],
