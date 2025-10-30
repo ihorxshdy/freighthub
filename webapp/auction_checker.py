@@ -85,9 +85,9 @@ def check_expired_auctions():
                     customer_phone=customer['phone_number'],
                     driver_phone=winner['phone_number']
                 )
-                print(f"✅ Аукцион завершен: заказ {order_id}, победитель {winner['name']}, цена {winning_bid['price']}")
+                logger.info(f"✅ Аукцион завершен: заказ {order_id}, победитель {winner['name']}, цена {winning_bid['price']}")
             except Exception as e:
-                print(f"❌ Ошибка отправки webhook для заказа {order_id}: {e}")
+                logger.error(f"❌ Ошибка отправки webhook для заказа {order_id}: {e}")
         
         else:
             # Нет ставок - меняем статус на no_offers
@@ -113,9 +113,9 @@ def check_expired_auctions():
                     customer_user_id=customer['telegram_id'],
                     cargo_description=order['cargo_description']
                 )
-                print(f"⚠️ Аукцион без ставок: заказ {order_id}")
+                logger.info(f"⚠️ Аукцион без ставок: заказ {order_id}")
             except Exception as e:
-                print(f"❌ Ошибка отправки webhook для заказа {order_id}: {e}")
+                logger.error(f"❌ Ошибка отправки webhook для заказа {order_id}: {e}")
     
     conn.close()
     return len(expired_orders)
@@ -138,8 +138,3 @@ if __name__ == '__main__':
         except Exception as e:
             logger.error(f"❌ Ошибка проверки аукционов: {e}", exc_info=True)
             time.sleep(60)  # При ошибке ждем дольше
-        except Exception as e:
-            print(f"\n❌ Ошибка: {e}")
-        
-        # Проверяем каждые 30 секунд
-        time.sleep(30)

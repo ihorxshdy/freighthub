@@ -1,4 +1,5 @@
 # Конфигурация веб-приложения
+import os
 
 # URL веб-приложения
 # Для локальной разработки:
@@ -14,4 +15,5 @@ FLASK_PORT = 5001
 FLASK_DEBUG = True
 
 # Настройки базы данных
-DATABASE_PATH = "../bot_database.db"
+# Используем переменную окружения DATABASE_PATH, если она задана
+DATABASE_PATH = os.environ.get('DATABASE_PATH', '../bot_database.db')
