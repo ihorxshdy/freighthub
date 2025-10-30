@@ -176,7 +176,7 @@ def get_customer_orders():
                   COUNT(DISTINCT b.id) as bids_count,
                   MIN(b.price) as min_bid_price,
                   winner.name as winner_name,
-                  winner.phone as winner_phone,
+                  winner.phone_number as winner_phone,
                   winner.telegram_id as winner_telegram_id
            FROM orders o
            LEFT JOIN bids b ON o.id = b.order_id
@@ -382,7 +382,7 @@ def get_driver_orders():
     # Выигранные заявки (только где этот водитель - победитель)
     won_orders = conn.execute(
         '''SELECT o.*, b.price as my_bid_price, u.name as customer_name, 
-                  u.phone as customer_phone, u.telegram_id as customer_telegram_id
+                  u.phone_number as customer_phone, u.telegram_id as customer_telegram_id
            FROM orders o
            JOIN bids b ON o.id = b.order_id
            JOIN users u ON o.customer_id = u.id
