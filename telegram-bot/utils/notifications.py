@@ -33,7 +33,7 @@ async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, car
         f"**Груз:** {cargo_description}\n"
         f"**Адрес доставки:** {delivery_address}\n"
         f"{price_text}"
-        f"⏱ Аукцион длится 30 минут!\n"
+        f"⏱ Аукцион длится 15 минут!\n"
         f"Откройте приложение для участия 👇"
     )
     
