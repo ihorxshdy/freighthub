@@ -1,7 +1,13 @@
 // Telegram Web App API
 const tg = window.Telegram?.WebApp;
+
 if (tg) {
-    tg.expand();
+    try {
+        tg.expand();
+        tg.ready();
+    } catch (e) {
+        console.error('Ошибка инициализации Telegram WebApp:', e);
+    }
 }
 
 // Базовый путь для API запросов (поддержка вложенных путей)
@@ -13,28 +19,56 @@ let currentTab = null;
 let currentOrderForBid = null;
 let truckTypesMap = {}; // Маппинг ID -> название типа машины
 
-// Режим тестирования (для браузера)
-const TEST_MODE = !tg || !tg.initDataUnsafe?.user;
-
-// Тестовый пользователь для режима разработки
-const TEST_USER = {
-    id: 123456789,
-    first_name: 'Тестовый',
-    last_name: 'Пользователь',
-    username: 'test_user'
-};
+// Получаем данные пользователя из Telegram
+function getTelegramUser() {
+    if (!tg || !tg.initDataUnsafe) {
+        return null;
+    }
+    
+    // Способ 1: из initDataUnsafe.user
+    if (tg.initDataUnsafe.user) {
+        return tg.initDataUnsafe.user;
+    }
+    
+    // Способ 2: парсим initData вручную
+    if (tg.initData) {
+        try {
+            const params = new URLSearchParams(tg.initData);
+            const userJson = params.get('user');
+            if (userJson) {
+                return JSON.parse(userJson);
+            }
+        } catch (e) {
+            console.error('Ошибка парсинга initData:', e);
+        }
+    }
+    
+    return null;
+}
 
 // Инициализация приложения
 document.addEventListener('DOMContentLoaded', async () => {
+    const loadingText = document.getElementById('loading-text');
+    
     try {
         // Применяем тему Telegram
         applyTelegramTheme();
         
-        // Получаем данные пользователя из Telegram или используем тестовые
-        const telegramUser = TEST_MODE ? TEST_USER : tg.initDataUnsafe.user;
+        loadingText.textContent = 'Подключение...';
         
-        console.log('Режим работы:', TEST_MODE ? 'ТЕСТОВЫЙ (браузер)' : 'TELEGRAM');
-        console.log('Пользователь Telegram:', telegramUser);
+        // Получаем данные пользователя из Telegram
+        const telegramUser = getTelegramUser();
+        
+        if (!telegramUser) {
+            console.error('Пользователь не найден в Telegram WebApp');
+            loadingText.textContent = 'Ошибка подключения';
+            setTimeout(() => {
+                showRegistrationScreen({ id: 0, first_name: 'Гость' });
+            }, 1500);
+            return;
+        }
+        
+        loadingText.textContent = `Загрузка профиля...`;
         
         // Всегда проверяем актуальные данные с сервера
         const user = await fetchUser(telegramUser.id);
@@ -177,39 +211,7 @@ function showScreen(screenId) {
 
 function showRegistrationScreen(telegramUser) {
     showScreen('registration-screen');
-    
-    // Обработчики выбора роли
-    document.querySelectorAll('.role-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const role = btn.dataset.role;
-            
-            try {
-                showScreen('loading-screen');
-                
-                const userData = {
-                    telegram_id: telegramUser.id,
-                    username: telegramUser.username || '',
-                    first_name: telegramUser.first_name || '',
-                    last_name: telegramUser.last_name || '',
-                    role: role
-                };
-                
-                await registerUser(userData);
-                const user = await fetchUser(telegramUser.id);
-                currentUser = user;
-                
-                // Сохраняем в localStorage
-                localStorage.setItem('currentUser', JSON.stringify(user));
-                console.log('Регистрация успешна, пользователь сохранен:', user);
-                
-                showMainScreen();
-            } catch (error) {
-                console.error('Ошибка регистрации:', error);
-                showError('Ошибка регистрации');
-                showRegistrationScreen(telegramUser);
-            }
-        });
-    });
+    console.log('Пользователь не зарегистрирован. Показываем инструкцию для регистрации через бота.');
 }
 
 async function showMainScreen() {
