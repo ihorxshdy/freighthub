@@ -84,11 +84,27 @@ function applyTelegramTheme() {
 
 // === API ФУНКЦИИ ===
 async function fetchUser(telegramId) {
-    const response = await fetch(`${API_BASE}api/user?telegram_id=${telegramId}`);
-    if (response.ok) {
-        return await response.json();
+    console.log('🔍 Fetching user with telegram_id:', telegramId);
+    const url = `${API_BASE}api/user?telegram_id=${telegramId}`;
+    console.log('📡 Request URL:', url);
+    
+    try {
+        const response = await fetch(url);
+        console.log('📥 Response status:', response.status);
+        
+        if (response.ok) {
+            const userData = await response.json();
+            console.log('✅ User found:', userData);
+            return userData;
+        }
+        
+        const errorData = await response.json();
+        console.log('❌ User not found:', errorData);
+        return null;
+    } catch (error) {
+        console.error('❌ Fetch error:', error);
+        return null;
     }
-    return null;
 }
 
 async function registerUser(userData) {
