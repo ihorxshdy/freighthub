@@ -344,15 +344,15 @@ function renderCustomerOrders(orders, container, tabId) {
             <div class="order-route">
                 <div class="route-point">
                     <span class="route-icon">📍</span>
-                    <span>${order.pickup_location}</span>
+                    <span>${order.pickup_address}</span>
                 </div>
                 <div class="route-point">
                     <span class="route-icon">🎯</span>
-                    <span>${order.delivery_location}</span>
+                    <span>${order.delivery_address}</span>
                 </div>
             </div>
             
-            <div class="order-description">${order.description}</div>
+            <div class="order-description">${order.cargo_description}</div>
             
             <div class="order-meta">
                 <span>🚛 ${getTruckTypeName(order.truck_type)}</span>
@@ -396,15 +396,15 @@ function renderDriverOrders(orders, container, tabId) {
             <div class="order-route">
                 <div class="route-point">
                     <span class="route-icon">📍</span>
-                    <span>${order.pickup_location}</span>
+                    <span>${order.pickup_address}</span>
                 </div>
                 <div class="route-point">
                     <span class="route-icon">🎯</span>
-                    <span>${order.delivery_location}</span>
+                    <span>${order.delivery_address}</span>
                 </div>
             </div>
             
-            <div class="order-description">${order.description}</div>
+            <div class="order-description">${order.cargo_description}</div>
             
             <div class="order-meta">
                 <span>🚛 ${getTruckTypeName(order.truck_type)}</span>
@@ -417,7 +417,7 @@ function renderDriverOrders(orders, container, tabId) {
                     <div class="my-bid-price">Моя ставка: ${formatPrice(order.my_bid_price)}</div>
                 ` : ''}
                 ${tabId === 'open' ? `
-                    <button class="btn btn-small btn-primary" onclick="openBidModal(${order.id}, '${order.pickup_location}', '${order.delivery_location}', '${order.description}')">
+                    <button class="btn btn-small btn-primary" onclick="openBidModal(${order.id}, '${order.pickup_address}', '${order.delivery_address}', '${order.cargo_description}')">
                         Сделать предложение
                     </button>
                 ` : ''}
@@ -528,7 +528,7 @@ async function loadTruckTypes() {
         data.forEach(category => {
             // Создаем группу для категории
             const optgroup = document.createElement('optgroup');
-            optgroup.label = category.category;
+            optgroup.label = category.name; // Исправлено: было category.category
             
             category.types.forEach(type => {
                 // Сохраняем в map для использования в getTruckTypeName
@@ -537,7 +537,7 @@ async function loadTruckTypes() {
                 // Создаем option
                 const option = document.createElement('option');
                 option.value = type.id;
-                option.textContent = `${type.emoji} ${type.name}`;
+                option.textContent = type.name; // Исправлено: убрали несуществующий emoji
                 optgroup.appendChild(option);
             });
             
