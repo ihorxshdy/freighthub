@@ -4,6 +4,9 @@ if (tg) {
     tg.expand();
 }
 
+// Базовый путь для API запросов (поддержка вложенных путей)
+const API_BASE = './';
+
 // Глобальные переменные
 let currentUser = null;
 let currentTab = null;
@@ -81,7 +84,7 @@ function applyTelegramTheme() {
 
 // === API ФУНКЦИИ ===
 async function fetchUser(telegramId) {
-    const response = await fetch(`/api/user?telegram_id=${telegramId}`);
+    const response = await fetch(`${API_BASE}api/user?telegram_id=${telegramId}`);
     if (response.ok) {
         return await response.json();
     }
@@ -89,7 +92,7 @@ async function fetchUser(telegramId) {
 }
 
 async function registerUser(userData) {
-    const response = await fetch('/api/register', {
+    const response = await fetch(API_BASE + 'api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData)
@@ -103,22 +106,22 @@ async function registerUser(userData) {
 }
 
 async function fetchTruckTypes() {
-    const response = await fetch('/api/truck-types');
+    const response = await fetch(API_BASE + 'api/truck-types');
     return await response.json();
 }
 
 async function fetchCustomerOrders(telegramId) {
-    const response = await fetch(`/api/customer/orders?telegram_id=${telegramId}`);
+    const response = await fetch(`${API_BASE}api/customer/orders?telegram_id=${telegramId}`);
     return await response.json();
 }
 
 async function fetchDriverOrders(telegramId) {
-    const response = await fetch(`/api/driver/orders?telegram_id=${telegramId}`);
+    const response = await fetch(`${API_BASE}api/driver/orders?telegram_id=${telegramId}`);
     return await response.json();
 }
 
 async function createOrder(orderData) {
-    const response = await fetch(`/api/orders?telegram_id=${currentUser.telegram_id}`, {
+    const response = await fetch(`${API_BASE}api/orders?telegram_id=${currentUser.telegram_id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData)
@@ -132,7 +135,7 @@ async function createOrder(orderData) {
 }
 
 async function createBid(bidData) {
-    const response = await fetch(`/api/bids?telegram_id=${currentUser.telegram_id}`, {
+    const response = await fetch(`${API_BASE}api/bids?telegram_id=${currentUser.telegram_id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bidData)
@@ -146,7 +149,7 @@ async function createBid(bidData) {
 }
 
 async function fetchOrderBids(orderId) {
-    const response = await fetch(`/api/orders/${orderId}/bids`);
+    const response = await fetch(`${API_BASE}api/orders/${orderId}/bids`);
     return await response.json();
 }
 
