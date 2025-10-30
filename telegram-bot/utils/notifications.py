@@ -110,8 +110,8 @@ async def notify_auction_losers(bot: Bot, order_id: int, winner_user_id: int, ca
         print(f"Нет участников для заявки #{order_id}")
         return 0
     
-    # Фильтруем победителя
-    losers = [p for p in participants if p['user_id'] != winner_user_id]
+    # Фильтруем победителя (сравниваем telegram_id)
+    losers = [p for p in participants if p['telegram_id'] != winner_user_id]
     
     message_text = (
         f"❌ **Аукцион завершен**\n\n"
