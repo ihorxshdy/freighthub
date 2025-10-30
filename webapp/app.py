@@ -170,13 +170,17 @@ def get_customer_orders():
         conn.close()
         return jsonify({'error': 'User not found'}), 404
     
-    # Получаем все заказы
+    # Получаем все заказы с контактами водителя (для завершенных)
     orders = conn.execute(
         '''SELECT o.*, 
                   COUNT(DISTINCT b.id) as bids_count,
-                  MIN(b.price) as min_bid_price
+                  MIN(b.price) as min_bid_price,
+                  winner.name as winner_name,
+                  winner.phone as winner_phone,
+                  winner.telegram_id as winner_telegram_id
            FROM orders o
            LEFT JOIN bids b ON o.id = b.order_id
+           LEFT JOIN users winner ON o.winner_driver_id = winner.id
            WHERE o.customer_id = ?
            GROUP BY o.id
            ORDER BY o.created_at DESC''',
@@ -375,13 +379,15 @@ def get_driver_orders():
         (user['id'],)
     ).fetchall()
     
-    # Выигранные заявки
+    # Выигранные заявки (только где этот водитель - победитель)
     won_orders = conn.execute(
-        '''SELECT o.*, b.price as my_bid_price
+        '''SELECT o.*, b.price as my_bid_price, u.name as customer_name, 
+                  u.phone as customer_phone, u.telegram_id as customer_telegram_id
            FROM orders o
            JOIN bids b ON o.id = b.order_id
-           WHERE b.driver_id = ? 
-            
+           JOIN users u ON o.customer_id = u.id
+           WHERE o.winner_driver_id = ? 
+             AND o.status = 'completed'
            ORDER BY o.created_at DESC''',
         (user['id'],)
     ).fetchall()

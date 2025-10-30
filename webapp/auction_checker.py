@@ -3,9 +3,17 @@
 Запускается как отдельный процесс или cron задача
 """
 import sqlite3
+import logging
 from datetime import datetime
 from webhook_client import notify_auction_complete, notify_auction_no_bids
 from config import DATABASE_PATH
+
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 def check_expired_auctions():
@@ -115,24 +123,21 @@ def check_expired_auctions():
 
 if __name__ == '__main__':
     """
-    Запуск проверки аукционов
-    Можно запускать через cron каждую минуту:
-    
-    * * * * * cd /path/to/webapp && python auction_checker.py
-    
-    Или через systemd timer, или как отдельный процесс на Render
+    Запуск проверки аукционов в цикле
     """
     import time
     
-    print("🚀 Запуск проверки аукционов...")
+    logger.info("🚀 Запуск проверки аукционов...")
     
     while True:
         try:
             count = check_expired_auctions()
             if count > 0:
-                print(f"⏰ Обработано аукционов: {count}")
-            else:
-                print(".", end="", flush=True)
+                logger.info(f"⏰ Обработано аукционов: {count}")
+            time.sleep(30)  # Проверка каждые 30 секунд
+        except Exception as e:
+            logger.error(f"❌ Ошибка проверки аукционов: {e}", exc_info=True)
+            time.sleep(60)  # При ошибке ждем дольше
         except Exception as e:
             print(f"\n❌ Ошибка: {e}")
         
