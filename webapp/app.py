@@ -264,14 +264,10 @@ def create_order():
         
         # Отправляем webhook уведомление боту
         try:
-            # Получаем название типа грузовика
-            from truck_config import TRUCK_TYPES
-            truck_type_name = TRUCK_TYPES.get(data['truck_type_id'], data['truck_type_id'])
-            
             print(f"📤 Sending webhook to bot...")
             notify_new_order(
                 order_id=order_id,
-                truck_type=truck_type_name,
+                truck_type=data['truck_type_id'],  # Передаём ID, а не название
                 cargo_description=data['description'],
                 delivery_address=data['delivery_location'],
                 max_price=data.get('price', 0)
@@ -279,6 +275,8 @@ def create_order():
             print(f"✅ Webhook sent successfully")
         except Exception as e:
             print(f"⚠️ Webhook error (non-critical): {e}")
+            import traceback
+            traceback.print_exc()
             # Не прерываем выполнение, если webhook не сработал
         
         return jsonify({'id': order_id, 'message': 'Order created successfully'})
