@@ -216,7 +216,7 @@ async function showMainScreen() {
     showScreen('main-screen');
     
     // Обновляем информацию о пользователе
-    document.getElementById('user-name').textContent = `${currentUser.first_name} ${currentUser.last_name || ''}`.trim();
+    document.getElementById('user-name').textContent = currentUser.name || 'Пользователь';
     const roleText = currentUser.role === 'customer' ? 'Заказчик' : 'Водитель';
     const phoneText = currentUser.phone_number ? ` • ${currentUser.phone_number}` : '';
     document.getElementById('user-role').textContent = roleText + phoneText;
