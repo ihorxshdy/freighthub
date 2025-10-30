@@ -43,10 +43,10 @@ jobs:
           
           # Создание .env файла на сервере
           ssh $SERVER_USER@$SERVER_HOST "echo 'BOT_TOKEN=$BOT_TOKEN' > /opt/freighthub/.env"
-          ssh $SERVER_USER@$SERVER_HOST "echo 'WEBAPP_URL=http://$SERVER_HOST' >> /opt/freighthub/.env"
+          ssh $SERVER_USER@$SERVER_HOST "echo 'WEBAPP_URL=https://freight-hub.ru/tgbotfiles/freighthub/' >> /opt/freighthub/.env"
           ssh $SERVER_USER@$SERVER_HOST "echo 'TELEGRAM_BOT_WEBHOOK_URL=http://telegram-bot:8080' >> /opt/freighthub/.env"
           ssh $SERVER_USER@$SERVER_HOST "echo 'WEBHOOK_SECRET=$WEBHOOK_SECRET' >> /opt/freighthub/.env"
-          ssh $SERVER_USER@$SERVER_HOST "echo 'DATABASE_PATH=/app/database/delivery.db' >> /opt/freighthub/.env"
+          ssh $SERVER_USER@$SERVER_HOST "echo 'DATABASE_PATH=/app/data/delivery.db' >> /opt/freighthub/.env"
           ssh $SERVER_USER@$SERVER_HOST "echo 'SERVER_HOST=$SERVER_HOST' >> /opt/freighthub/.env"
           ssh $SERVER_USER@$SERVER_HOST "echo 'WEBHOOK_PORT=8080' >> /opt/freighthub/.env"
           
