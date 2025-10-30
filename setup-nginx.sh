@@ -19,7 +19,7 @@ server {
 
     # Web Application - точный путь
     location /tgbotfiles/freighthub/ {
-        proxy_pass http://localhost:80/;
+        proxy_pass http://localhost:5000/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';

@@ -38,7 +38,7 @@ services:
     container_name: freighthub-webapp
     restart: always
     ports:
-      - "80:5000"
+      - "5000:5000"
     volumes:
       - db-data:/app/database
     environment:
