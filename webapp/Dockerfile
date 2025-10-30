@@ -9,8 +9,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Копируем код
 COPY . .
 
-# Создаём папку для БД
-RUN mkdir -p /app/database
+# Создаём папку для БД (теперь монтируется в /app/data)
+RUN mkdir -p /app/data
 
 # Открываем порт
 EXPOSE 5000
