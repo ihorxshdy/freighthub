@@ -5,7 +5,15 @@ from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 import os
 import sqlite3
+import logging
 from datetime import datetime
+
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Импорт локальной конфигурации
 from truck_config import TRUCK_CATEGORIES, DATABASE_PATH, SECRET_KEY
@@ -65,11 +73,11 @@ def get_user():
     
     # Сначала проверим сколько вообще пользователей в БД
     total_users = conn.execute('SELECT COUNT(*) as count FROM users').fetchone()
-    print(f"📊 Total users in DB: {total_users['count']}")
+    logger.info(f"📊 Total users in DB: {total_users['count']}")
     
     # Покажем всех пользователей для отладки
     all_users = conn.execute('SELECT telegram_id, name, role FROM users LIMIT 10').fetchall()
-    print(f"👥 Users in DB: {[dict(u) for u in all_users]}")
+    logger.info(f"👥 Users in DB: {[dict(u) for u in all_users]}")
     
     user = conn.execute(
         'SELECT * FROM users WHERE telegram_id = ?',
@@ -78,10 +86,10 @@ def get_user():
     conn.close()
     
     if user:
-        print(f"✅ User found: {dict(user)}")
+        logger.info(f"✅ User found: {dict(user)}")
         return jsonify(dict_from_row(user))
     
-    print(f"❌ User NOT found for telegram_id={telegram_id}")
+    logger.error(f"❌ User NOT found for telegram_id={telegram_id}")
     return jsonify({
         'error': 'User not found',
         'telegram_id': telegram_id,
@@ -202,21 +210,21 @@ def create_order():
     telegram_id = request.args.get('telegram_id')
     data = request.json
     
-    print(f"📝 Create order request: telegram_id={telegram_id}, data={data}")
+    logger.info(f"📝 Create order request: telegram_id={telegram_id}, data={data}")
     
     if not telegram_id:
-        print("❌ Error: telegram_id missing")
+        logger.error("❌ Error: telegram_id missing")
         return jsonify({'error': 'telegram_id required'}), 400
     
     required_fields = ['pickup_location', 'delivery_location', 'description', 'truck_type_id']
     if not all(field in data for field in required_fields):
         missing = [f for f in required_fields if f not in data]
-        print(f"❌ Error: Missing fields: {missing}")
+        logger.error(f"❌ Error: Missing fields: {missing}")
         return jsonify({'error': 'Missing required fields', 'missing': missing}), 400
     
     try:
         conn = get_db_connection()
-        print(f"✅ DB connected: {DATABASE_PATH}")
+        logger.info(f"✅ DB connected: {DATABASE_PATH}")
         
         # Получаем ID пользователя (по схеме БД бота - используем id, не telegram_id)
         user = conn.execute(
@@ -226,10 +234,10 @@ def create_order():
         
         if not user:
             conn.close()
-            print(f"❌ Error: User not found for telegram_id={telegram_id}")
+            logger.error(f"❌ Error: User not found for telegram_id={telegram_id}")
             return jsonify({'error': 'User not found'}), 404
         
-        print(f"✅ User found: id={user['id']}")
+        logger.info(f"✅ User found: id={user['id']}")
         
         # Expires_at - через 15 минут от создания
         from datetime import timedelta
@@ -260,11 +268,11 @@ def create_order():
         conn.commit()
         conn.close()
         
-        print(f"✅ Order created: id={order_id}")
+        logger.info(f"✅ Order created: id={order_id}")
         
         # Отправляем webhook уведомление боту
         try:
-            print(f"📤 Sending webhook to bot...")
+            logger.info(f"📤 Sending webhook to bot...")
             notify_new_order(
                 order_id=order_id,
                 truck_type=data['truck_type_id'],  # Передаём ID, а не название
@@ -272,9 +280,9 @@ def create_order():
                 delivery_address=data['delivery_location'],
                 max_price=data.get('price', 0)
             )
-            print(f"✅ Webhook sent successfully")
+            logger.info(f"✅ Webhook sent successfully")
         except Exception as e:
-            print(f"⚠️ Webhook error (non-critical): {e}")
+            logger.info(f"⚠️ Webhook error (non-critical): {e}")
             import traceback
             traceback.print_exc()
             # Не прерываем выполнение, если webhook не сработал
@@ -282,7 +290,7 @@ def create_order():
         return jsonify({'id': order_id, 'message': 'Order created successfully'})
     
     except Exception as e:
-        print(f"❌ Fatal error creating order: {e}")
+        logger.error(f"❌ Fatal error creating order: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
