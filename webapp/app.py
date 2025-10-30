@@ -168,7 +168,7 @@ def get_customer_orders():
                   COUNT(DISTINCT b.id) as bids_count,
                   MIN(b.price) as min_bid_price
            FROM orders o
-           LEFT JOIN bids b ON o.id = b.order_id AND b.status = 'pending'
+           LEFT JOIN bids b ON o.id = b.order_id
            WHERE o.customer_id = ?
            GROUP BY o.id
            ORDER BY o.created_at DESC''',
@@ -342,7 +342,7 @@ def get_driver_orders():
                   COUNT(DISTINCT b.id) as bids_count,
                   MIN(b.price) as min_bid_price
            FROM orders o
-           LEFT JOIN bids b ON o.id = b.order_id AND b.status = 'pending'
+           LEFT JOIN bids b ON o.id = b.order_id
            WHERE o.status = 'active'
              AND o.id NOT IN (
                  SELECT order_id FROM bids WHERE driver_id = ? AND status = 'pending'
@@ -360,9 +360,9 @@ def get_driver_orders():
                   MIN(b2.price) as min_bid_price
            FROM orders o
            JOIN bids b ON o.id = b.order_id
-           LEFT JOIN bids b2 ON o.id = b2.order_id AND b2.status = 'pending'
+           LEFT JOIN bids b2 ON o.id = b2.order_id
            WHERE b.driver_id = ? 
-             AND b.status = 'pending'
+            
              AND o.status = 'active'
            GROUP BY o.id
            ORDER BY o.created_at DESC''',
@@ -375,14 +375,14 @@ def get_driver_orders():
            FROM orders o
            JOIN bids b ON o.id = b.order_id
            WHERE b.driver_id = ? 
-             AND b.status = 'won'
+            
            ORDER BY o.created_at DESC''',
         (user['id'],)
     ).fetchall()
     
     # Закрытые заявки
     closed_orders = conn.execute(
-        '''SELECT o.*, b.price as my_bid_price, b.status as bid_status
+        '''SELECT o.*, b.price as my_bid_price
            FROM orders o
            LEFT JOIN bids b ON o.id = b.order_id AND b.driver_id = ?
            WHERE (o.status = 'completed' OR o.status = 'cancelled')
@@ -438,14 +438,12 @@ def create_bid():
     
     # Создаем предложение
     cursor = conn.execute(
-        '''INSERT INTO bids (order_id, driver_id, price, status, created_at)
-           VALUES (?, ?, ?, ?, ?)''',
+        '''INSERT INTO bids (order_id, driver_id, price)
+           VALUES (?, ?, ?)''',
         (
             data['order_id'],
             user['id'],
-            data['price'],
-            'pending',
-            datetime.now().isoformat()
+            data['price']
         )
     )
     
