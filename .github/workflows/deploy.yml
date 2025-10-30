@@ -41,7 +41,7 @@ jobs:
             ./ $SERVER_USER@$SERVER_HOST:/opt/freighthub/
           
           # Создание .env файла на сервере
-          ssh $SERVER_USER@$SERVER_HOST "cat > /opt/freighthub/.env << 'EOF'
+          ssh $SERVER_USER@$SERVER_HOST "cat > /opt/freighthub/.env <<EOF
 BOT_TOKEN=$BOT_TOKEN
 WEBAPP_URL=http://$SERVER_HOST
 TELEGRAM_BOT_WEBHOOK_URL=http://telegram-bot:8080
@@ -49,10 +49,11 @@ WEBHOOK_SECRET=$WEBHOOK_SECRET
 DATABASE_PATH=/app/database/delivery.db
 SERVER_HOST=$SERVER_HOST
 WEBHOOK_PORT=8080
-EOF"
+EOF
+"
           
           # Перезапуск контейнеров
-          ssh $SERVER_USER@$SERVER_HOST << 'ENDSSH'
+          ssh $SERVER_USER@$SERVER_HOST <<'ENDSSH'
             cd /opt/freighthub
             docker-compose down
             docker-compose build --no-cache
