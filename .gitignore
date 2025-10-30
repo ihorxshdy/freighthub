@@ -26,11 +26,13 @@ Thumbs.db
 # Environment
 #.env
 
-# Database
-database/
+# Database files (но не Python код!)
 *.db
 *.sqlite
 *.sqlite3
+database/*.db
+database/*.sqlite
+database/*.sqlite3
 
 # Logs
 *.log
