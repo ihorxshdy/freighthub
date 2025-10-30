@@ -345,7 +345,7 @@ def get_driver_orders():
            LEFT JOIN bids b ON o.id = b.order_id
            WHERE o.status = 'active'
              AND o.id NOT IN (
-                 SELECT order_id FROM bids WHERE driver_id = ? AND status = 'pending'
+                 SELECT order_id FROM bids WHERE driver_id = ?
              )
            GROUP BY o.id
            ORDER BY o.created_at DESC
@@ -428,7 +428,7 @@ def create_bid():
     
     # Проверяем, существует ли уже предложение
     existing = conn.execute(
-        'SELECT id FROM bids WHERE order_id = ? AND driver_id = ? AND status = "pending"',
+        'SELECT id FROM bids WHERE order_id = ? AND driver_id = ?',
         (data['order_id'], user['id'])
     ).fetchone()
     
