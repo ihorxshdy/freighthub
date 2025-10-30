@@ -19,9 +19,7 @@ server {
 
     # Web Application - точный путь
     location /tgbotfiles/freighthub/ {
-        # Убираем завершающий слеш, чтобы путь сохранялся
-        rewrite ^/tgbotfiles/freighthub/(.*)$ /$1 break;
-        proxy_pass http://localhost:5000;
+        proxy_pass http://localhost:5000/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
