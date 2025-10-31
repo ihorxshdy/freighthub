@@ -2,7 +2,7 @@
 Утилиты для отправки уведомлений пользователям
 """
 from aiogram import Bot
-from database.models import get_user_by_id, get_all_drivers, get_bid_participants
+from database.models import get_user_by_telegram_id, get_all_drivers, get_bid_participants
 from bot.config import get_truck_display_name
 from bot.webapp_config import WEBAPP_URL
 
@@ -60,16 +60,16 @@ async def notify_auction_winner(bot: Bot, order_id: int, winner_user_id: int, wi
     Args:
         bot: Экземпляр бота
         order_id: ID заявки
-        winner_user_id: ID победителя (user_id в БД)
+        winner_user_id: telegram_id победителя
         winning_price: Выигрышная цена
         cargo_description: Описание груза
         delivery_address: Адрес доставки
         customer_phone: Телефон заказчика
     """
-    winner = await get_user_by_id(winner_user_id)
+    winner = await get_user_by_telegram_id(winner_user_id)
     
     if not winner:
-        print(f"Не найден победитель с ID {winner_user_id}")
+        print(f"Не найден победитель с telegram_id {winner_user_id}")
         return False
     
     message_text = (
@@ -143,13 +143,13 @@ async def notify_customer_no_bids(bot: Bot, order_id: int, customer_user_id: int
     Args:
         bot: Экземпляр бота
         order_id: ID заявки
-        customer_user_id: ID заказчика (user_id в БД)
+        customer_user_id: telegram_id заказчика
         cargo_description: Описание груза
     """
-    customer = await get_user_by_id(customer_user_id)
+    customer = await get_user_by_telegram_id(customer_user_id)
     
     if not customer:
-        print(f"Не найден заказчик с ID {customer_user_id}")
+        print(f"Не найден заказчик с telegram_id {customer_user_id}")
         return False
     
     message_text = (
@@ -179,15 +179,15 @@ async def notify_customer_auction_complete(bot: Bot, order_id: int, customer_use
     Args:
         bot: Экземпляр бота
         order_id: ID заявки
-        customer_user_id: ID заказчика (user_id в БД)
+        customer_user_id: telegram_id заказчика
         cargo_description: Описание груза
         winning_price: Выигрышная цена
         driver_phone: Телефон водителя-победителя
     """
-    customer = await get_user_by_id(customer_user_id)
+    customer = await get_user_by_telegram_id(customer_user_id)
     
     if not customer:
-        print(f"Не найден заказчик с ID {customer_user_id}")
+        print(f"Не найден заказчик с telegram_id {customer_user_id}")
         return False
     
     message_text = (
