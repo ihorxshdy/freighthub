@@ -26,11 +26,12 @@ async def setup_bot_commands(bot: Bot):
     
     # Отключаем Menu Button (кнопку под строкой ввода)
     try:
-        from aiogram.types import MenuButtonDefault
-        await bot.set_chat_menu_button(menu_button=MenuButtonDefault())
-        logger.info("Menu Button отключена")
+        from aiogram.types import MenuButtonCommands
+        # Устанавливаем обычное меню команд вместо WebApp
+        await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
+        logger.info("✅ Menu Button изменена на Commands (показывает список команд)")
     except Exception as e:
-        logger.warning(f"Не удалось отключить Menu Button: {e}")
+        logger.warning(f"⚠️ Не удалось изменить Menu Button: {e}")
     
     # Настройка описания бота
     try:

@@ -73,12 +73,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Получаем данные пользователя из Telegram
         const telegramUser = getTelegramUser();
         
-        if (!telegramUser) {
+        if (!telegramUser || !telegramUser.id) {
             console.log('❌ Пользователь не найден в Telegram WebApp', 'error');
             loadingText.textContent = 'Ошибка подключения';
-            setTimeout(() => {
-                showRegistrationScreen({ id: 0, first_name: 'Гость' });
-            }, 1500);
+            
+            // Показываем сообщение с инструкцией
+            showScreen('registration-screen');
+            document.querySelector('.registration-form h2').textContent = 'Ошибка доступа';
+            document.querySelector('.registration-form .description').innerHTML = 
+                'Не удалось получить данные пользователя из Telegram.<br><br>' +
+                '<strong>Пожалуйста, откройте приложение через команду /webapp в боте</strong><br><br>' +
+                'Не используйте кнопку "Приложение" внизу экрана.';
             return;
         }
         
