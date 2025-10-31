@@ -155,25 +155,43 @@ function applyTelegramTheme() {
 
 // === API ФУНКЦИИ ===
 
-// Универсальная функция для fetch с timeout
-async function fetchWithTimeout(url, options = {}, timeout = 10000) {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
+// Универсальная функция для fetch с timeout и retry
+async function fetchWithTimeout(url, options = {}, timeout = 10000, retries = 2) {
+    let lastError;
     
-    try {
-        const response = await fetch(url, {
-            ...options,
-            signal: controller.signal
-        });
-        clearTimeout(id);
-        return response;
-    } catch (error) {
-        clearTimeout(id);
-        if (error.name === 'AbortError') {
-            throw new Error('Превышено время ожидания. Проверьте интернет-соединение.');
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        
+        try {
+            if (attempt > 0) {
+                debugLog(`🔄 Повторная попытка ${attempt}/${retries} для ${url}`, 'warning');
+            }
+            
+            const response = await fetch(url, {
+                ...options,
+                signal: controller.signal
+            });
+            clearTimeout(id);
+            return response;
+        } catch (error) {
+            clearTimeout(id);
+            lastError = error;
+            
+            if (error.name === 'AbortError') {
+                debugLog(`⏱️ Timeout (попытка ${attempt + 1}/${retries + 1})`, 'warning');
+                if (attempt < retries) {
+                    // Экспоненциальная задержка между попытками
+                    await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+                    continue;
+                }
+                throw new Error('Превышено время ожидания. Проверьте интернет-соединение.');
+            }
+            throw error;
         }
-        throw error;
     }
+    
+    throw lastError;
 }
 
 async function fetchUser(telegramId) {
@@ -182,7 +200,7 @@ async function fetchUser(telegramId) {
     debugLog('📡 URL: ' + url);
     
     try {
-        const response = await fetchWithTimeout(url, {}, 10000);
+        const response = await fetchWithTimeout(url, {}, 20000, 2); // 20 сек, 2 повтора
         debugLog('📥 Статус ответа: ' + response.status);
         
         if (response.ok) {
@@ -224,7 +242,7 @@ async function fetchCustomerOrders(telegramId) {
     const startTime = Date.now();
     
     try {
-        const response = await fetchWithTimeout(url, {}, 15000);
+        const response = await fetchWithTimeout(url, {}, 30000, 2); // 30 сек, 2 повтора для медленной сети
         const duration = Date.now() - startTime;
         debugLog(`✅ Заказы загружены за ${duration}ms, статус: ${response.status}`);
         
@@ -248,7 +266,7 @@ async function fetchDriverOrders(telegramId) {
     const startTime = Date.now();
     
     try {
-        const response = await fetchWithTimeout(url, {}, 15000);
+        const response = await fetchWithTimeout(url, {}, 30000, 2); // 30 сек, 2 повтора для медленной сети
         const duration = Date.now() - startTime;
         debugLog(`✅ Заказы загружены за ${duration}ms, статус: ${response.status}`);
         
