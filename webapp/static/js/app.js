@@ -120,13 +120,35 @@ function applyTelegramTheme() {
 }
 
 // === API ФУНКЦИИ ===
+
+// Универсальная функция для fetch с timeout
+async function fetchWithTimeout(url, options = {}, timeout = 10000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+    } catch (error) {
+        clearTimeout(id);
+        if (error.name === 'AbortError') {
+            throw new Error('Превышено время ожидания. Проверьте интернет-соединение.');
+        }
+        throw error;
+    }
+}
+
 async function fetchUser(telegramId) {
     console.log('🔍 Fetching user with telegram_id:', telegramId);
     const url = `${API_BASE}api/user?telegram_id=${telegramId}`;
     console.log('📡 Request URL:', url);
     
     try {
-        const response = await fetch(url);
+        const response = await fetchWithTimeout(url, {}, 10000);
         console.log('📥 Response status:', response.status);
         
         if (response.ok) {
@@ -145,11 +167,11 @@ async function fetchUser(telegramId) {
 }
 
 async function registerUser(userData) {
-    const response = await fetch(API_BASE + 'api/register', {
+    const response = await fetchWithTimeout(API_BASE + 'api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData)
-    });
+    }, 15000);
     
     if (!response.ok) {
         throw new Error('Ошибка регистрации');
@@ -159,26 +181,32 @@ async function registerUser(userData) {
 }
 
 async function fetchTruckTypes() {
-    const response = await fetch(API_BASE + 'api/truck-types');
+    const response = await fetchWithTimeout(`${API_BASE}api/truck-types`, {}, 10000);
     return await response.json();
 }
 
 async function fetchCustomerOrders(telegramId) {
-    const response = await fetch(`${API_BASE}api/customer/orders?telegram_id=${telegramId}`);
+    const response = await fetchWithTimeout(`${API_BASE}api/customer/orders?telegram_id=${telegramId}`, {}, 15000);
+    if (!response.ok) {
+        throw new Error('Ошибка загрузки заказов');
+    }
     return await response.json();
 }
 
 async function fetchDriverOrders(telegramId) {
-    const response = await fetch(`${API_BASE}api/driver/orders?telegram_id=${telegramId}`);
+    const response = await fetchWithTimeout(`${API_BASE}api/driver/orders?telegram_id=${telegramId}`, {}, 15000);
+    if (!response.ok) {
+        throw new Error('Ошибка загрузки заказов');
+    }
     return await response.json();
 }
 
 async function createOrder(orderData) {
-    const response = await fetch(`${API_BASE}api/orders?telegram_id=${currentUser.telegram_id}`, {
+    const response = await fetchWithTimeout(`${API_BASE}api/orders?telegram_id=${currentUser.telegram_id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData)
-    });
+    }, 15000);
     
     if (!response.ok) {
         throw new Error('Ошибка создания заявки');
@@ -188,11 +216,11 @@ async function createOrder(orderData) {
 }
 
 async function createBid(bidData) {
-    const response = await fetch(`${API_BASE}api/bids?telegram_id=${currentUser.telegram_id}`, {
+    const response = await fetchWithTimeout(`${API_BASE}api/bids?telegram_id=${currentUser.telegram_id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bidData)
-    });
+    }, 15000);
     
     if (!response.ok) {
         throw new Error('Ошибка создания предложения');
@@ -202,7 +230,7 @@ async function createBid(bidData) {
 }
 
 async function fetchOrderBids(orderId) {
-    const response = await fetch(`${API_BASE}api/orders/${orderId}/bids`);
+    const response = await fetchWithTimeout(`${API_BASE}api/orders/${orderId}/bids`, {}, 10000);
     return await response.json();
 }
 
@@ -309,7 +337,7 @@ async function switchTab(tabId) {
 
 async function loadTabData(tabId, forceRefresh = false) {
     const tabPane = document.getElementById(`tab-${tabId}`);
-    tabPane.innerHTML = '<div class="loading-container"><div class="spinner"></div></div>';
+    tabPane.innerHTML = '<div class="loading-container"><div class="spinner"></div><p style="margin-top: 10px; color: #666;">Загрузка данных...</p></div>';
     
     try {
         // Проверяем кэш
@@ -319,9 +347,11 @@ async function loadTabData(tabId, forceRefresh = false) {
         let orders;
         if (cacheValid) {
             // Используем кэш
+            console.log('📦 Используем кэш данных');
             orders = ordersCache;
         } else {
             // Загружаем свежие данные
+            console.log('🌐 Загружаем свежие данные с сервера...');
             if (currentUser.role === 'customer') {
                 orders = await fetchCustomerOrders(currentUser.telegram_id);
             } else {
@@ -330,6 +360,7 @@ async function loadTabData(tabId, forceRefresh = false) {
             // Сохраняем в кэш
             ordersCache = orders;
             ordersCacheTime = now;
+            console.log('✅ Данные загружены и закэшированы');
         }
         
         // Отрисовываем данные для текущей вкладки
@@ -342,8 +373,17 @@ async function loadTabData(tabId, forceRefresh = false) {
         // Обновляем бейджи для всех вкладок
         updateBadges(orders);
     } catch (error) {
-        console.error('Ошибка загрузки данных:', error);
-        tabPane.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><div class="empty-title">Ошибка загрузки</div></div>';
+        console.error('❌ Ошибка загрузки данных:', error);
+        tabPane.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">⚠️</div>
+                <div class="empty-title">Ошибка загрузки</div>
+                <p style="color: #666; margin: 10px 0;">${error.message || 'Проверьте интернет-соединение'}</p>
+                <button onclick="refreshOrders()" style="margin-top: 15px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                    🔄 Повторить
+                </button>
+            </div>
+        `;
     }
 }
 
