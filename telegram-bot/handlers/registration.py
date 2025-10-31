@@ -68,11 +68,11 @@ async def start_handler(message: Message, state: FSMContext, bot: Bot):
         
         if is_subscribed:
             # Подписан - переходим к регистрации
-            await start_registration(message, state)
+            await start_registration_after_subscription(bot, message.from_user.id, state)
         else:
             # Не подписан - просим подписаться
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="� Подписаться на канал", url=CHANNEL_URL)],
+                [InlineKeyboardButton(text="📢 Подписаться на канал", url=CHANNEL_URL)],
                 [InlineKeyboardButton(text="✅ Проверить подписку", callback_data="check_subscription")]
             ])
             
