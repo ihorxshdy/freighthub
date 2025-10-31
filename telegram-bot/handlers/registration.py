@@ -97,16 +97,20 @@ async def check_subscription_handler(callback: CallbackQuery, state: FSMContext,
     
     if is_subscribed:
         await callback.answer("✅ Подписка подтверждена!")
-        await callback.message.delete()
-        # Переходим к регистрации
-        await start_registration(callback.message, state)
+        # Удаляем сообщение с кнопками
+        try:
+            await callback.message.delete()
+        except:
+            pass
+        # Переходим к регистрации - отправляем новое сообщение
+        await start_registration_after_subscription(bot, callback.from_user.id, state)
     else:
         await callback.answer(
             "❌ Подписка не найдена. Пожалуйста, подпишитесь на канал и попробуйте снова.",
             show_alert=True
         )
 
-async def start_registration(message: Message, state: FSMContext):
+async def start_registration_after_subscription(bot: Bot, user_id: int, state: FSMContext):
     """Начало процесса регистрации после подтверждения подписки"""
     phone_keyboard = ReplyKeyboardMarkup(
         keyboard=[
@@ -116,9 +120,10 @@ async def start_registration(message: Message, state: FSMContext):
         one_time_keyboard=True
     )
     
-    await message.answer(
-        "✅ Отлично! Начинаем регистрацию.\n\n"
-        "Пожалуйста, поделитесь вашим номером телефона:",
+    await bot.send_message(
+        chat_id=user_id,
+        text="✅ Отлично! Начинаем регистрацию.\n\n"
+             "Пожалуйста, поделитесь вашим номером телефона:",
         reply_markup=phone_keyboard
     )
     await state.set_state(RegistrationStates.waiting_for_phone)
