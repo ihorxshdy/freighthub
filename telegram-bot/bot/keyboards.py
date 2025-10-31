@@ -1,21 +1,12 @@
 """
 Функции создания клавиатур для бота
 """
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, WebAppInfo
-from bot.webapp_config import WEBAPP_URL
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 
 def get_webapp_menu():
-    """Главное меню с кнопкой открытия веб-приложения"""
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(
-                text="🌐 Приложение", 
-                web_app=WebAppInfo(url=WEBAPP_URL)
-            )],
-        ],
-        resize_keyboard=True,
-        one_time_keyboard=False
-    )
+    """Главное меню - теперь просто удаляет клавиатуру"""
+    from aiogram.types import ReplyKeyboardRemove
+    return ReplyKeyboardRemove()
 
 def get_customer_menu():
     """Главное меню для заказчика (DEPRECATED - используйте get_webapp_menu)"""
