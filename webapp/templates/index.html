@@ -11,15 +11,6 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <!-- Debug панель (глобальная, поверх всего) -->
-    <div id="debug-panel" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10000; width: 90%; max-width: 500px; max-height: 70vh; padding: 15px; background: rgba(0,0,0,0.95); border-radius: 12px; text-align: left; font-size: 11px; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; position: sticky; top: 0; background: rgba(0,0,0,0.95); padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.2);">
-            <strong style="color: white;">📊 Debug логи</strong>
-            <button onclick="document.getElementById('debug-panel').style.display='none'" style="background: #f44336; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer;">✕</button>
-        </div>
-        <div id="debug-logs" style="color: white;"></div>
-    </div>
-
     <div id="app">
         <!-- Экран загрузки -->
         <div id="loading-screen" class="screen">
@@ -28,9 +19,6 @@
                 <h1>FreightHub</h1>
                 <div class="spinner"></div>
                 <p id="loading-text">Загрузка...</p>
-                <button id="show-debug" onclick="document.getElementById('debug-panel').style.display='block'" style="margin-top: 15px; padding: 8px 15px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; cursor: pointer; font-size: 12px;">
-                    🐛 Показать отладку
-                </button>
             </div>
         </div>
 
@@ -50,10 +38,10 @@
                     </p>
 
                     <div class="info-block" style="background: var(--tg-theme-secondary-bg-color, #f0f0f0); padding: 20px; border-radius: 12px; margin: 20px 0;">
-                        <p style="margin: 10px 0;"><strong>📱 Шаг 1:</strong> Найдите бота <strong>@freighthub_bot</strong></p>
-                        <p style="margin: 10px 0;"><strong>▶️ Шаг 2:</strong> Отправьте команду <strong>/start</strong></p>
-                        <p style="margin: 10px 0;"><strong>✅ Шаг 3:</strong> Выберите свою роль (Заказчик или Водитель)</p>
-                        <p style="margin: 10px 0;"><strong>🔄 Шаг 4:</strong> Вернитесь и обновите это приложение</p>
+                        <p style="margin: 10px 0;"><strong>Шаг 1:</strong> Найдите бота <strong>@freighthub_bot</strong></p>
+                        <p style="margin: 10px 0;"><strong>Шаг 2:</strong> Отправьте команду <strong>/start</strong></p>
+                        <p style="margin: 10px 0;"><strong>Шаг 3:</strong> Выберите свою роль (Заказчик или Водитель)</p>
+                        <p style="margin: 10px 0;"><strong>Шаг 4:</strong> Вернитесь и обновите это приложение</p>
                     </div>
 
                     <button class="btn-primary" onclick="window.Telegram.WebApp.close()" style="width: 100%; padding: 16px; font-size: 16px; margin-top: 20px;">
@@ -74,10 +62,6 @@
                         <div class="user-role" id="user-role">Заказчик</div>
                     </div>
                 </div>
-                <!-- Кнопка отладки в хедере -->
-                <button onclick="document.getElementById('debug-panel').style.display='block'" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); padding: 6px 12px; border-radius: 6px; color: white; font-size: 12px; cursor: pointer;">
-                    🐛 Debug
-                </button>
             </header>
 
             <!-- Вкладки навигации -->

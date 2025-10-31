@@ -284,7 +284,10 @@ def create_order():
                 truck_type=data['truck_type_id'],  # Передаём ID, а не название
                 cargo_description=data['description'],
                 delivery_address=data['delivery_location'],
-                max_price=data.get('price', 0)
+                max_price=data.get('price', 0),
+                pickup_address=data.get('pickup_location'),
+                pickup_time=data.get('pickup_time'),
+                delivery_time=data.get('delivery_time')
             )
             logger.info(f"✅ Webhook sent successfully")
         except Exception as e:

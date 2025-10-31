@@ -9,7 +9,7 @@ from bot.webapp_config import WEBAPP_URL
 
 from typing import Optional
 
-async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, cargo_description: str, delivery_address: str, max_price: Optional[float] = None):
+async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, cargo_description: str, delivery_address: str, max_price: Optional[float] = None, pickup_address: Optional[str] = None, pickup_time: Optional[str] = None, delivery_time: Optional[str] = None):
     """
     Уведомляет всех водителей о новой заявке
     
@@ -20,21 +20,30 @@ async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, car
         cargo_description: Описание груза
         delivery_address: Адрес доставки
         max_price: Максимальная цена (может быть None)
+        pickup_address: Адрес подачи (может быть None)
+        pickup_time: Время подачи (может быть None)
+        delivery_time: Время доставки (может быть None)
     """
     drivers = await get_all_drivers()
     truck_name = get_truck_display_name(truck_type)
     
     # Формируем текст сообщения
-    price_text = f"**Максимальная цена:** {max_price} руб.\n" if max_price else ""
+    price_text = f"Максимальная цена: {max_price} руб.\n" if max_price else ""
+    pickup_text = f"Адрес подачи: {pickup_address}\n" if pickup_address else ""
+    pickup_time_text = f"Время подачи: {pickup_time}\n" if pickup_time else ""
+    delivery_time_text = f"Время доставки: {delivery_time}\n" if delivery_time else ""
     
     message_text = (
-        f"🚚 **Новая заявка #{order_id}**\n\n"
-        f"**Тип машины:** {truck_name}\n"
-        f"**Груз:** {cargo_description}\n"
-        f"**Адрес доставки:** {delivery_address}\n"
-        f"{price_text}"
-        f"⏱ Аукцион длится 15 минут!\n"
-        f"Откройте приложение для участия 👇"
+        f"Новая заявка #{order_id}\n\n"
+        f"Тип машины: {truck_name}\n"
+        f"Груз: {cargo_description}\n"
+        f"{pickup_text}"
+        f"{pickup_time_text}"
+        f"Адрес доставки: {delivery_address}\n"
+        f"{delivery_time_text}"
+        f"{price_text}\n"
+        f"Аукцион длится 15 минут!\n"
+        f"Откройте приложение для участия"
     )
     
     # Отправляем уведомление всем водителям
@@ -73,12 +82,12 @@ async def notify_auction_winner(bot: Bot, order_id: int, winner_user_id: int, wi
         return False
     
     message_text = (
-        f"🎉 **Поздравляем! Вы выиграли аукцион!**\n\n"
-        f"**Заявка #{order_id}**\n"
-        f"**Груз:** {cargo_description}\n"
-        f"**Адрес доставки:** {delivery_address}\n"
-        f"**Ваша цена:** {winning_price} руб.\n\n"
-        f"📞 **Телефон заказчика:** {customer_phone}\n\n"
+        f"Поздравляем! Вы выиграли аукцион!\n\n"
+        f"Заявка #{order_id}\n"
+        f"Груз: {cargo_description}\n"
+        f"Адрес доставки: {delivery_address}\n"
+        f"Ваша цена: {winning_price} руб.\n\n"
+        f"Телефон заказчика: {customer_phone}\n\n"
         f"Свяжитесь с заказчиком для уточнения деталей!"
     )
     
@@ -114,9 +123,9 @@ async def notify_auction_losers(bot: Bot, order_id: int, winner_user_id: int, ca
     losers = [p for p in participants if p['telegram_id'] != winner_user_id]
     
     message_text = (
-        f"❌ **Аукцион завершен**\n\n"
-        f"**Заявка #{order_id}**\n"
-        f"**Груз:** {cargo_description}\n\n"
+        f"Аукцион завершен\n\n"
+        f"Заявка #{order_id}\n"
+        f"Груз: {cargo_description}\n\n"
         f"К сожалению, ваше предложение не было выбрано.\n"
         f"Следите за новыми заявками!"
     )
@@ -153,9 +162,9 @@ async def notify_customer_no_bids(bot: Bot, order_id: int, customer_user_id: int
         return False
     
     message_text = (
-        f"⏰ **Аукцион завершен**\n\n"
-        f"**Заявка #{order_id}**\n"
-        f"**Груз:** {cargo_description}\n\n"
+        f"Аукцион завершен\n\n"
+        f"Заявка #{order_id}\n"
+        f"Груз: {cargo_description}\n\n"
         f"К сожалению, не поступило ни одного предложения от водителей.\n"
         f"Вы можете создать новую заявку с другими условиями."
     )
@@ -191,11 +200,11 @@ async def notify_customer_auction_complete(bot: Bot, order_id: int, customer_use
         return False
     
     message_text = (
-        f"✅ **Аукцион завершен!**\n\n"
-        f"**Заявка #{order_id}**\n"
-        f"**Груз:** {cargo_description}\n"
-        f"**Выигрышная цена:** {winning_price} руб.\n\n"
-        f"📞 **Телефон водителя:** {driver_phone}\n\n"
+        f"Аукцион завершен!\n\n"
+        f"Заявка #{order_id}\n"
+        f"Груз: {cargo_description}\n"
+        f"Выигрышная цена: {winning_price} руб.\n\n"
+        f"Телефон водителя: {driver_phone}\n\n"
         f"Свяжитесь с водителем для уточнения деталей перевозки!"
     )
     

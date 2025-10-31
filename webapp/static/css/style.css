@@ -207,7 +207,11 @@ body {
     cursor: pointer;
     transition: all 0.3s;
     position: relative;
-    white-space: nowrap;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    text-align: center;
+    line-height: 1.3;
 }
 
 .tab.active {
