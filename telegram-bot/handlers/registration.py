@@ -28,11 +28,17 @@ async def check_subscription(bot: Bot, user_id: int) -> bool:
     """Проверяет подписку пользователя на канал"""
     try:
         member = await bot.get_chat_member(chat_id=REQUIRED_CHANNEL, user_id=user_id)
+        print(f"✅ Проверка подписки пользователя {user_id}: статус = {member.status}")
         # Статусы: creator, administrator, member - подписан
         # left, kicked - не подписан
-        return member.status in ['creator', 'administrator', 'member']
+        is_subscribed = member.status in ['creator', 'administrator', 'member']
+        print(f"{'✅ Подписан' if is_subscribed else '❌ Не подписан'}")
+        return is_subscribed
     except Exception as e:
-        print(f"Ошибка проверки подписки: {e}")
+        print(f"❌ Ошибка проверки подписки для пользователя {user_id}: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        # При ошибке считаем что не подписан
         return False
 
 @router.message(Command("start"))
