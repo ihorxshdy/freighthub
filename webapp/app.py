@@ -57,7 +57,9 @@ def dict_from_row(row):
 @app.route('/')
 def index():
     """Главная страница Mini App"""
-    return render_template('index.html')
+    import time
+    # Передаём timestamp для cache busting
+    return render_template('index.html', version=int(time.time()))
 
 # === API ENDPOINTS ===
 

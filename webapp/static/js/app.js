@@ -1,12 +1,23 @@
 // Telegram Web App API
 const tg = window.Telegram?.WebApp;
 
+// Логирование версии скрипта для отладки
+console.log('🚀 FreightHub WebApp загружен. Версия: ' + new Date().toISOString());
+console.log('📱 Telegram WebApp доступен:', !!tg);
+console.log('🌐 User Agent:', navigator.userAgent);
+console.log('📡 Connection:', navigator.connection ? {
+    effectiveType: navigator.connection.effectiveType,
+    downlink: navigator.connection.downlink,
+    rtt: navigator.connection.rtt
+} : 'Not available');
+
 if (tg) {
     try {
         tg.expand();
         tg.ready();
+        console.log('✅ Telegram WebApp инициализирован');
     } catch (e) {
-        console.error('Ошибка инициализации Telegram WebApp:', e);
+        console.error('❌ Ошибка инициализации Telegram WebApp:', e);
     }
 }
 
@@ -186,19 +197,51 @@ async function fetchTruckTypes() {
 }
 
 async function fetchCustomerOrders(telegramId) {
-    const response = await fetchWithTimeout(`${API_BASE}api/customer/orders?telegram_id=${telegramId}`, {}, 15000);
-    if (!response.ok) {
-        throw new Error('Ошибка загрузки заказов');
+    console.log('📦 Загрузка заказов заказчика, telegram_id:', telegramId);
+    const url = `${API_BASE}api/customer/orders?telegram_id=${telegramId}`;
+    console.log('📡 URL:', url);
+    const startTime = Date.now();
+    
+    try {
+        const response = await fetchWithTimeout(url, {}, 15000);
+        const duration = Date.now() - startTime;
+        console.log(`✅ Заказы заказчика загружены за ${duration}ms, статус:`, response.status);
+        
+        if (!response.ok) {
+            throw new Error('Ошибка загрузки заказов');
+        }
+        const data = await response.json();
+        console.log('📊 Получено заказов:', data);
+        return data;
+    } catch (error) {
+        const duration = Date.now() - startTime;
+        console.error(`❌ Ошибка загрузки заказов заказчика за ${duration}ms:`, error);
+        throw error;
     }
-    return await response.json();
 }
 
 async function fetchDriverOrders(telegramId) {
-    const response = await fetchWithTimeout(`${API_BASE}api/driver/orders?telegram_id=${telegramId}`, {}, 15000);
-    if (!response.ok) {
-        throw new Error('Ошибка загрузки заказов');
+    console.log('🚗 Загрузка заказов водителя, telegram_id:', telegramId);
+    const url = `${API_BASE}api/driver/orders?telegram_id=${telegramId}`;
+    console.log('📡 URL:', url);
+    const startTime = Date.now();
+    
+    try {
+        const response = await fetchWithTimeout(url, {}, 15000);
+        const duration = Date.now() - startTime;
+        console.log(`✅ Заказы водителя загружены за ${duration}ms, статус:`, response.status);
+        
+        if (!response.ok) {
+            throw new Error('Ошибка загрузки заказов');
+        }
+        const data = await response.json();
+        console.log('📊 Получено заказов:', data);
+        return data;
+    } catch (error) {
+        const duration = Date.now() - startTime;
+        console.error(`❌ Ошибка загрузки заказов водителя за ${duration}ms:`, error);
+        throw error;
     }
-    return await response.json();
 }
 
 async function createOrder(orderData) {
