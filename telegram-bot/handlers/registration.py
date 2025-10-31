@@ -175,6 +175,7 @@ async def role_chosen(callback: CallbackQuery, state: FSMContext):
         data = await state.get_data()
         
         try:
+            print(f"📝 Создание пользователя: telegram_id={callback.from_user.id}, phone={data['phone_number']}, role={role}")
             await create_user(
                 telegram_id=callback.from_user.id,
                 phone_number=data['phone_number'],
@@ -182,6 +183,11 @@ async def role_chosen(callback: CallbackQuery, state: FSMContext):
                 truck_type=None,
                 name=callback.from_user.full_name or "Заказчик"
             )
+            print(f"✅ Пользователь создан: telegram_id={callback.from_user.id}")
+            
+            # Даем базе данных время на синхронизацию
+            import asyncio
+            await asyncio.sleep(0.5)
             
             await callback.message.edit_text(
                 "✅ **Регистрация завершена!**\n\n"
@@ -289,6 +295,7 @@ async def truck_subtype_chosen(callback: CallbackQuery, state: FSMContext):
         truck_name = get_truck_display_name(truck_type)
         
         try:
+            print(f"📝 Создание водителя: telegram_id={callback.from_user.id}, phone={data['phone_number']}, truck={truck_type}")
             await create_user(
                 telegram_id=callback.from_user.id,
                 phone_number=data['phone_number'],
@@ -296,6 +303,11 @@ async def truck_subtype_chosen(callback: CallbackQuery, state: FSMContext):
                 truck_type=truck_type,
                 name=callback.from_user.full_name or "Водитель"
             )
+            print(f"✅ Водитель создан: telegram_id={callback.from_user.id}")
+            
+            # Даем базе данных время на синхронизацию
+            import asyncio
+            await asyncio.sleep(0.5)
             
             await callback.message.edit_text(
                 f"✅ **Регистрация завершена!**\n\n"

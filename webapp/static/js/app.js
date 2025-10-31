@@ -27,11 +27,16 @@ const CACHE_DURATION = 30000; // 30 секунд
 // Получаем данные пользователя из Telegram
 function getTelegramUser() {
     if (!tg || !tg.initDataUnsafe) {
+        console.log('⚠️ tg или initDataUnsafe отсутствует');
         return null;
     }
     
+    console.log('🔍 initDataUnsafe:', JSON.stringify(tg.initDataUnsafe));
+    console.log('🔍 initData:', tg.initData);
+    
     // Способ 1: из initDataUnsafe.user
-    if (tg.initDataUnsafe.user) {
+    if (tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
+        console.log('✅ Пользователь найден в initDataUnsafe.user');
         return tg.initDataUnsafe.user;
     }
     
@@ -41,13 +46,16 @@ function getTelegramUser() {
             const params = new URLSearchParams(tg.initData);
             const userJson = params.get('user');
             if (userJson) {
-                return JSON.parse(userJson);
+                const user = JSON.parse(userJson);
+                console.log('✅ Пользователь распарсен из initData');
+                return user;
             }
         } catch (e) {
-            console.error('Ошибка парсинга initData:', e);
+            console.error('❌ Ошибка парсинга initData:', e);
         }
     }
     
+    console.log('⚠️ Не удалось получить данные пользователя');
     return null;
 }
 
