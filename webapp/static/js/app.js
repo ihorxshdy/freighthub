@@ -18,6 +18,9 @@ let currentUser = null;
 let currentTab = null;
 let currentOrderForBid = null;
 let truckTypesMap = {}; // Маппинг ID -> название типа машины
+let ordersCache = null; // Кэш заказов
+let ordersCacheTime = 0; // Время последнего обновления кэша
+const CACHE_DURATION = 30000; // 30 секунд
 
 // Получаем данные пользователя из Telegram
 function getTelegramUser() {
@@ -232,6 +235,17 @@ async function showMainScreen() {
     
     // Инициализируем модальные окна
     initModals();
+    
+    // Автоматическое обновление данных каждые 30 секунд
+    setInterval(() => {
+        if (currentTab && !document.hidden) {
+            // Обновляем только если вкладка активна
+            const now = Date.now();
+            if (now - ordersCacheTime >= CACHE_DURATION) {
+                loadTabData(currentTab, true);
+            }
+        }
+    }, CACHE_DURATION);
 }
 
 function initTabs() {
@@ -293,24 +307,51 @@ async function switchTab(tabId) {
     await loadTabData(tabId);
 }
 
-async function loadTabData(tabId) {
+async function loadTabData(tabId, forceRefresh = false) {
     const tabPane = document.getElementById(`tab-${tabId}`);
     tabPane.innerHTML = '<div class="loading-container"><div class="spinner"></div></div>';
     
     try {
-        if (currentUser.role === 'customer') {
-            const orders = await fetchCustomerOrders(currentUser.telegram_id);
-            renderCustomerOrders(orders[tabId], tabPane, tabId);
-            updateBadges(orders);
+        // Проверяем кэш
+        const now = Date.now();
+        const cacheValid = ordersCache && !forceRefresh && (now - ordersCacheTime < CACHE_DURATION);
+        
+        let orders;
+        if (cacheValid) {
+            // Используем кэш
+            orders = ordersCache;
         } else {
-            const orders = await fetchDriverOrders(currentUser.telegram_id);
-            renderDriverOrders(orders[tabId], tabPane, tabId);
-            updateBadges(orders);
+            // Загружаем свежие данные
+            if (currentUser.role === 'customer') {
+                orders = await fetchCustomerOrders(currentUser.telegram_id);
+            } else {
+                orders = await fetchDriverOrders(currentUser.telegram_id);
+            }
+            // Сохраняем в кэш
+            ordersCache = orders;
+            ordersCacheTime = now;
         }
+        
+        // Отрисовываем данные для текущей вкладки
+        if (currentUser.role === 'customer') {
+            renderCustomerOrders(orders[tabId], tabPane, tabId);
+        } else {
+            renderDriverOrders(orders[tabId], tabPane, tabId);
+        }
+        
+        // Обновляем бейджи для всех вкладок
+        updateBadges(orders);
     } catch (error) {
         console.error('Ошибка загрузки данных:', error);
         tabPane.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><div class="empty-title">Ошибка загрузки</div></div>';
     }
+}
+
+// Функция для принудительного обновления данных
+function refreshOrders() {
+    ordersCache = null;
+    ordersCacheTime = 0;
+    loadTabData(currentTab, true);
 }
 
 function updateBadges(orders) {
@@ -468,7 +509,7 @@ function initModals() {
                 createOrderModal.classList.add('hidden');
                 createOrderForm.reset();
                 showSuccess('Заявка создана успешно!');
-                loadTabData(currentTab);
+                refreshOrders(); // Обновляем данные
             } catch (error) {
                 showError('Ошибка создания заявки');
             }
@@ -500,7 +541,7 @@ function initModals() {
                 document.getElementById('create-bid-modal').classList.add('hidden');
                 createBidForm.reset();
                 showSuccess('Предложение отправлено!');
-                loadTabData(currentTab);
+                refreshOrders(); // Обновляем данные
             } catch (error) {
                 showError('Ошибка отправки предложения');
             }
@@ -517,6 +558,11 @@ function initModals() {
 }
 
 async function loadTruckTypes() {
+    // Если truckTypesMap уже заполнен, не загружаем повторно
+    if (Object.keys(truckTypesMap).length > 0) {
+        return;
+    }
+    
     try {
         const data = await fetchTruckTypes();
         const select = document.getElementById('truck-type');
