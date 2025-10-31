@@ -1,23 +1,42 @@
 // Telegram Web App API
 const tg = window.Telegram?.WebApp;
 
+// Debug логирование в интерфейс
+const debugLogs = [];
+function debugLog(message, type = 'info') {
+    const timestamp = new Date().toLocaleTimeString('ru-RU');
+    const logEntry = `[${timestamp}] ${message}`;
+    debugLogs.push(logEntry);
+    
+    // Обновляем панель если она существует
+    const debugPanel = document.getElementById('debug-logs');
+    if (debugPanel) {
+        const colors = { info: '#4CAF50', error: '#f44336', warning: '#ff9800' };
+        const color = colors[type] || colors.info;
+        debugPanel.innerHTML += `<div style="color: ${color}; margin: 3px 0;">${logEntry}</div>`;
+        debugPanel.scrollTop = debugPanel.scrollHeight;
+    }
+    
+    // Дублируем в обычный console
+    console.log(logEntry);
+}
+
 // Логирование версии скрипта для отладки
-console.log('🚀 FreightHub WebApp загружен. Версия: ' + new Date().toISOString());
-console.log('📱 Telegram WebApp доступен:', !!tg);
-console.log('🌐 User Agent:', navigator.userAgent);
-console.log('📡 Connection:', navigator.connection ? {
-    effectiveType: navigator.connection.effectiveType,
-    downlink: navigator.connection.downlink,
-    rtt: navigator.connection.rtt
-} : 'Not available');
+debugLog('🚀 FreightHub WebApp загружен. Версия: ' + new Date().toISOString());
+debugLog('📱 Telegram WebApp доступен: ' + (!!tg));
+debugLog('🌐 User Agent: ' + navigator.userAgent);
+
+if (navigator.connection) {
+    debugLog('📡 Тип сети: ' + navigator.connection.effectiveType + ', скорость: ' + navigator.connection.downlink + ' Mbps, задержка: ' + navigator.connection.rtt + ' ms');
+}
 
 if (tg) {
     try {
         tg.expand();
         tg.ready();
-        console.log('✅ Telegram WebApp инициализирован');
+        debugLog('✅ Telegram WebApp инициализирован');
     } catch (e) {
-        console.error('❌ Ошибка инициализации Telegram WebApp:', e);
+        debugLog('❌ Ошибка инициализации Telegram WebApp: ' + e.message, 'error');
     }
 }
 
@@ -69,12 +88,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         applyTelegramTheme();
         
         loadingText.textContent = 'Подключение...';
+        debugLog('🔌 Подключение к Telegram...');
         
         // Получаем данные пользователя из Telegram
         const telegramUser = getTelegramUser();
         
         if (!telegramUser) {
-            console.error('Пользователь не найден в Telegram WebApp');
+            debugLog('❌ Пользователь не найден в Telegram WebApp', 'error');
             loadingText.textContent = 'Ошибка подключения';
             setTimeout(() => {
                 showRegistrationScreen({ id: 0, first_name: 'Гость' });
@@ -82,6 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         
+        debugLog('👤 Telegram пользователь: ID=' + telegramUser.id + ', имя=' + telegramUser.first_name);
         loadingText.textContent = `Загрузка профиля...`;
         
         // Всегда проверяем актуальные данные с сервера
@@ -91,26 +112,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentUser = user;
             // Сохраняем в localStorage для быстрого доступа
             localStorage.setItem('currentUser', JSON.stringify(user));
-            console.log('Пользователь загружен:', user);
+            debugLog('💾 Профиль сохранён в localStorage');
             showMainScreen();
         } else {
             // Проверяем кэш (на случай если сервер недоступен)
+            debugLog('⚠️ Пользователь не найден на сервере, проверяем кэш...', 'warning');
             const cachedUser = localStorage.getItem('currentUser');
             if (cachedUser) {
                 const parsedUser = JSON.parse(cachedUser);
                 // Проверяем что это тот же пользователь
                 if (parsedUser.telegram_id == telegramUser.id) {
                     currentUser = parsedUser;
-                    console.log('Пользователь загружен из кэша:', parsedUser);
+                    debugLog('📦 Пользователь загружен из кэша: ' + parsedUser.name);
                     showMainScreen();
                     return;
                 }
             }
             // Показываем регистрацию только если пользователя точно нет
+            debugLog('📝 Требуется регистрация');
             showRegistrationScreen(telegramUser);
         }
     } catch (error) {
-        console.error('Ошибка инициализации:', error);
+        debugLog('💥 Критическая ошибка инициализации: ' + error.message, 'error');
         showError('Ошибка загрузки приложения');
     }
 });
@@ -154,25 +177,24 @@ async function fetchWithTimeout(url, options = {}, timeout = 10000) {
 }
 
 async function fetchUser(telegramId) {
-    console.log('🔍 Fetching user with telegram_id:', telegramId);
+    debugLog('🔍 Запрос пользователя, telegram_id: ' + telegramId);
     const url = `${API_BASE}api/user?telegram_id=${telegramId}`;
-    console.log('📡 Request URL:', url);
+    debugLog('📡 URL: ' + url);
     
     try {
         const response = await fetchWithTimeout(url, {}, 10000);
-        console.log('📥 Response status:', response.status);
+        debugLog('📥 Статус ответа: ' + response.status);
         
         if (response.ok) {
             const userData = await response.json();
-            console.log('✅ User found:', userData);
+            debugLog('✅ Пользователь найден: ' + userData.name + ' (' + userData.role + ')');
             return userData;
         }
         
-        const errorData = await response.json();
-        console.log('❌ User not found:', errorData);
+        debugLog('❌ Пользователь не найден', 'warning');
         return null;
     } catch (error) {
-        console.error('❌ Fetch error:', error);
+        debugLog('❌ Ошибка запроса: ' + error.message, 'error');
         return null;
     }
 }
@@ -197,49 +219,49 @@ async function fetchTruckTypes() {
 }
 
 async function fetchCustomerOrders(telegramId) {
-    console.log('📦 Загрузка заказов заказчика, telegram_id:', telegramId);
+    debugLog('📦 Загрузка заказов заказчика, ID: ' + telegramId);
     const url = `${API_BASE}api/customer/orders?telegram_id=${telegramId}`;
-    console.log('📡 URL:', url);
     const startTime = Date.now();
     
     try {
         const response = await fetchWithTimeout(url, {}, 15000);
         const duration = Date.now() - startTime;
-        console.log(`✅ Заказы заказчика загружены за ${duration}ms, статус:`, response.status);
+        debugLog(`✅ Заказы загружены за ${duration}ms, статус: ${response.status}`);
         
         if (!response.ok) {
             throw new Error('Ошибка загрузки заказов');
         }
         const data = await response.json();
-        console.log('📊 Получено заказов:', data);
+        const total = Object.values(data).reduce((sum, arr) => sum + arr.length, 0);
+        debugLog(`📊 Всего заказов: ${total}`);
         return data;
     } catch (error) {
         const duration = Date.now() - startTime;
-        console.error(`❌ Ошибка загрузки заказов заказчика за ${duration}ms:`, error);
+        debugLog(`❌ Ошибка загрузки за ${duration}ms: ${error.message}`, 'error');
         throw error;
     }
 }
 
 async function fetchDriverOrders(telegramId) {
-    console.log('🚗 Загрузка заказов водителя, telegram_id:', telegramId);
+    debugLog('🚗 Загрузка заказов водителя, ID: ' + telegramId);
     const url = `${API_BASE}api/driver/orders?telegram_id=${telegramId}`;
-    console.log('📡 URL:', url);
     const startTime = Date.now();
     
     try {
         const response = await fetchWithTimeout(url, {}, 15000);
         const duration = Date.now() - startTime;
-        console.log(`✅ Заказы водителя загружены за ${duration}ms, статус:`, response.status);
+        debugLog(`✅ Заказы загружены за ${duration}ms, статус: ${response.status}`);
         
         if (!response.ok) {
             throw new Error('Ошибка загрузки заказов');
         }
         const data = await response.json();
-        console.log('📊 Получено заказов:', data);
+        const total = Object.values(data).reduce((sum, arr) => sum + arr.length, 0);
+        debugLog(`📊 Всего заказов: ${total}`);
         return data;
     } catch (error) {
         const duration = Date.now() - startTime;
-        console.error(`❌ Ошибка загрузки заказов водителя за ${duration}ms:`, error);
+        debugLog(`❌ Ошибка загрузки за ${duration}ms: ${error.message}`, 'error');
         throw error;
     }
 }
@@ -390,11 +412,11 @@ async function loadTabData(tabId, forceRefresh = false) {
         let orders;
         if (cacheValid) {
             // Используем кэш
-            console.log('📦 Используем кэш данных');
+            debugLog('📦 Используем кэш данных (возраст: ' + Math.round((now - ordersCacheTime)/1000) + 's)');
             orders = ordersCache;
         } else {
             // Загружаем свежие данные
-            console.log('🌐 Загружаем свежие данные с сервера...');
+            debugLog('🌐 Загружаем свежие данные с сервера...');
             if (currentUser.role === 'customer') {
                 orders = await fetchCustomerOrders(currentUser.telegram_id);
             } else {
@@ -403,7 +425,7 @@ async function loadTabData(tabId, forceRefresh = false) {
             // Сохраняем в кэш
             ordersCache = orders;
             ordersCacheTime = now;
-            console.log('✅ Данные загружены и закэшированы');
+            debugLog('✅ Данные закэшированы');
         }
         
         // Отрисовываем данные для текущей вкладки
@@ -416,7 +438,7 @@ async function loadTabData(tabId, forceRefresh = false) {
         // Обновляем бейджи для всех вкладок
         updateBadges(orders);
     } catch (error) {
-        console.error('❌ Ошибка загрузки данных:', error);
+        debugLog('❌ Критическая ошибка загрузки: ' + error.message, 'error');
         tabPane.innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon">⚠️</div>
@@ -424,6 +446,9 @@ async function loadTabData(tabId, forceRefresh = false) {
                 <p style="color: #666; margin: 10px 0;">${error.message || 'Проверьте интернет-соединение'}</p>
                 <button onclick="refreshOrders()" style="margin-top: 15px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer;">
                     🔄 Повторить
+                </button>
+                <button onclick="document.getElementById('debug-panel').style.display='block'" style="margin-top: 10px; padding: 8px 15px; background: #666; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                    🐛 Показать логи
                 </button>
             </div>
         `;

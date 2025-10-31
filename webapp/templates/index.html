@@ -19,6 +19,17 @@
                 <h1>FreightHub</h1>
                 <div class="spinner"></div>
                 <p id="loading-text">Загрузка...</p>
+                <!-- Debug панель -->
+                <div id="debug-panel" style="display: none; margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.5); border-radius: 8px; text-align: left; font-size: 11px; max-height: 300px; overflow-y: auto;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <strong>📊 Debug логи</strong>
+                        <button onclick="document.getElementById('debug-panel').style.display='none'" style="background: #f44336; color: white; border: none; padding: 2px 8px; border-radius: 4px; cursor: pointer;">✕</button>
+                    </div>
+                    <div id="debug-logs"></div>
+                </div>
+                <button id="show-debug" onclick="document.getElementById('debug-panel').style.display='block'" style="margin-top: 15px; padding: 8px 15px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; cursor: pointer; font-size: 12px;">
+                    🐛 Показать отладку
+                </button>
             </div>
         </div>
 
