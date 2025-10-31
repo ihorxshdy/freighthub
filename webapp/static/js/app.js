@@ -5,6 +5,8 @@ if (tg) {
     try {
         tg.expand();
         tg.ready();
+        // Скрываем нижнюю кнопку "Приложение"
+        tg.MainButton.hide();
     } catch (e) {
         console.error('Ошибка инициализации Telegram WebApp:', e);
     }
@@ -85,20 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log('💾 Профиль сохранён в localStorage');
             showMainScreen();
         } else {
-            // Проверяем кэш (на случай если сервер недоступен)
-            console.log('⚠️ Пользователь не найден на сервере, проверяем кэш...', 'warning');
-            const cachedUser = localStorage.getItem('currentUser');
-            if (cachedUser) {
-                const parsedUser = JSON.parse(cachedUser);
-                // Проверяем что это тот же пользователь
-                if (parsedUser.telegram_id == telegramUser.id) {
-                    currentUser = parsedUser;
-                    console.log('📦 Пользователь загружен из кэша: ' + parsedUser.name);
-                    showMainScreen();
-                    return;
-                }
-            }
-            // Показываем регистрацию только если пользователя точно нет
+            // Пользователь не зарегистрирован - показываем экран регистрации
             console.log('📝 Требуется регистрация');
             showRegistrationScreen(telegramUser);
         }
@@ -301,6 +290,9 @@ function showRegistrationScreen(telegramUser) {
 async function showMainScreen() {
     showScreen('main-screen');
     
+    // Загружаем типы грузовиков ДО отображения профиля
+    await loadTruckTypes();
+    
     // Обновляем информацию о пользователе
     document.getElementById('user-name').textContent = currentUser.name || 'Пользователь';
     const roleText = currentUser.role === 'customer' ? 'Заказчик' : 'Водитель';
@@ -326,9 +318,6 @@ async function showMainScreen() {
     
     // Инициализируем вкладки
     initTabs();
-    
-    // Загружаем типы грузовиков для форм
-    await loadTruckTypes();
     
     // Инициализируем модальные окна
     initModals();

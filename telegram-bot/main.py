@@ -58,6 +58,9 @@ async def main():
     storage = MemoryStorage()
     dp = Dispatcher(storage=storage)
     
+    # Передаем bot в workflow_data для доступа в обработчиках
+    dp.workflow_data.update({"bot": bot})
+    
     # Подключение роутеров
     dp.include_router(registration.router)
     dp.include_router(orders.router)

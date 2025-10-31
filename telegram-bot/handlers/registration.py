@@ -1,4 +1,4 @@
-from aiogram import Router, F
+from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup, WebAppInfo
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -11,16 +11,32 @@ from bot.webapp_config import WEBAPP_URL
 
 router = Router()
 
+# ID канала для обязательной подписки
+REQUIRED_CHANNEL = "@freighthub_logistics"
+CHANNEL_URL = "https://t.me/freighthub_logistics"
+
 
 class RegistrationStates(StatesGroup):
+    waiting_for_subscription = State()
     waiting_for_phone = State()
     choosing_role = State()
     choosing_truck_category = State()
     choosing_truck_subtype = State()
     choosing_truck_final = State()
 
+async def check_subscription(bot: Bot, user_id: int) -> bool:
+    """Проверяет подписку пользователя на канал"""
+    try:
+        member = await bot.get_chat_member(chat_id=REQUIRED_CHANNEL, user_id=user_id)
+        # Статусы: creator, administrator, member - подписан
+        # left, kicked - не подписан
+        return member.status in ['creator', 'administrator', 'member']
+    except Exception as e:
+        print(f"Ошибка проверки подписки: {e}")
+        return False
+
 @router.message(Command("start"))
-async def start_handler(message: Message, state: FSMContext):
+async def start_handler(message: Message, state: FSMContext, bot: Bot):
     """Обработка команды /start - запуск регистрации"""
     if not message.from_user:
         return
@@ -33,31 +49,73 @@ async def start_handler(message: Message, state: FSMContext):
         role_name = "Заказчик" if user['role'] == 'customer' else "Водитель"
         
         await message.answer(
-            f"{role_emoji} **Добро пожаловать, {user['name'] or role_name}!**\n\n"
+            f"{role_emoji} Добро пожаловать, {user['name'] or role_name}!\n\n"
             f"Вы вошли как: {role_name}\n\n"
-            "🌐 Используйте кнопку **Приложение** для работы с заказами\n"
-            "💬 Уведомления о новых заказах и результатах аукционов будут приходить в этот чат\n\n"
-            "ℹ️ Для справки используйте команду /help",
+            "Используйте кнопку Приложение для работы с заказами\n"
+            "Уведомления о новых заказах и результатах аукционов будут приходить в этот чат\n\n"
+            "Для справки используйте команду /help",
             reply_markup=get_webapp_menu()
         )
     else:
-        # Новый пользователь - запрашиваем номер телефона
-        phone_keyboard = ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton(text="📞 Поделиться номером телефона", request_contact=True)]
-            ],
-            resize_keyboard=True,
-            one_time_keyboard=True
-        )
+        # Новый пользователь - проверяем подписку на канал
+        is_subscribed = await check_subscription(bot, message.from_user.id)
         
-        await message.answer(
-            "👋 **Добро пожаловать в FreightHub!**\n\n"
-            "🚚 *Сервис грузоперевозок нового поколения*\n\n"
-            "Для начала работы необходимо зарегистрироваться.\n"
-            "Пожалуйста, поделитесь вашим номером телефона:",
-            reply_markup=phone_keyboard
+        if is_subscribed:
+            # Подписан - переходим к регистрации
+            await start_registration(message, state)
+        else:
+            # Не подписан - просим подписаться
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="� Подписаться на канал", url=CHANNEL_URL)],
+                [InlineKeyboardButton(text="✅ Проверить подписку", callback_data="check_subscription")]
+            ])
+            
+            await message.answer(
+                "👋 Добро пожаловать в FreightHub!\n\n"
+                "🚚 Сервис грузоперевозок нового поколения\n\n"
+                "Для использования сервиса необходимо подписаться на наш Telegram-канал:\n\n"
+                "1️⃣ Нажмите кнопку 'Подписаться на канал'\n"
+                "2️⃣ Вернитесь в бот и нажмите 'Проверить подписку'\n"
+                "3️⃣ Продолжите регистрацию",
+                reply_markup=keyboard
+            )
+            await state.set_state(RegistrationStates.waiting_for_subscription)
+
+@router.callback_query(StateFilter(RegistrationStates.waiting_for_subscription), F.data == "check_subscription")
+async def check_subscription_handler(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """Проверка подписки на канал"""
+    if not callback.from_user:
+        return
+    
+    is_subscribed = await check_subscription(bot, callback.from_user.id)
+    
+    if is_subscribed:
+        await callback.answer("✅ Подписка подтверждена!")
+        await callback.message.delete()
+        # Переходим к регистрации
+        await start_registration(callback.message, state)
+    else:
+        await callback.answer(
+            "❌ Подписка не найдена. Пожалуйста, подпишитесь на канал и попробуйте снова.",
+            show_alert=True
         )
-        await state.set_state(RegistrationStates.waiting_for_phone)
+
+async def start_registration(message: Message, state: FSMContext):
+    """Начало процесса регистрации после подтверждения подписки"""
+    phone_keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="📞 Поделиться номером телефона", request_contact=True)]
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    
+    await message.answer(
+        "✅ Отлично! Начинаем регистрацию.\n\n"
+        "Пожалуйста, поделитесь вашим номером телефона:",
+        reply_markup=phone_keyboard
+    )
+    await state.set_state(RegistrationStates.waiting_for_phone)
 
 @router.message(StateFilter(RegistrationStates.waiting_for_phone), F.contact)
 async def phone_received(message: Message, state: FSMContext):
