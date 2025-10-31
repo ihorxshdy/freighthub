@@ -208,6 +208,81 @@ async def role_chosen(callback: CallbackQuery, state: FSMContext):
 async def start_registration(callback: CallbackQuery, state: FSMContext):
     """Обработчик кнопки 'Начать работу' (deprecated)"""
 
+@router.message(Command("start"))
+async def start_handler(message: Message, state: FSMContext):
+    """Обработка команды /start"""
+    if not message.from_user:
+        return
+        
+    user = await get_user_by_telegram_id(message.from_user.id)
+    
+    if user:
+        # Удалили веб-приложение
+        
+        if user['role'] == 'customer':
+            await message.answer(
+                f"🏠 **Главное меню**\n\n"
+                f"Добро пожаловать, {user['name'] or 'заказчик'}!\n\n"
+                "📦 Создавайте заявки на грузоперевозку\n"
+                "📋 Отслеживайте статус своих заявок\n\n"
+                "Выберите действие:",
+                reply_markup=get_customer_menu()
+            )
+        else:  # driver
+            # Получаем все машины водителя
+            from database.models import get_driver_vehicles
+            vehicles = await get_driver_vehicles(user['id'])
+            
+            if vehicles:
+                # Формируем список машин
+                vehicles_text = ""
+                for vehicle in vehicles:
+                    truck_name = get_truck_display_name(vehicle['truck_type'])
+                    primary_mark = "⭐ " if vehicle['is_primary'] else "• "
+                    vehicles_text += f"{primary_mark}{truck_name}\n"
+            else:
+                # Если нет машин в новой таблице, используем старое поле
+                if user['truck_type']:
+                    vehicles_text = f"• {get_truck_display_name(user['truck_type'])}\n"
+                else:
+                    vehicles_text = "Нет добавленных машин\n"
+            
+            await message.answer(
+                f"🏠 **Главное меню**\n\n"
+                f"Добро пожаловать, {user['name'] or 'водитель'}!\n\n"
+                f"🚚 Ваши машины:\n{vehicles_text}\n"
+                "🏆 Просматривайте выигранные заявки\n"
+                "💰 Отслеживайте свои предложения\n"
+                "🚗 Управляйте вашими машинами\n\n"
+                "Выберите действие:",
+                reply_markup=get_driver_menu()
+            )
+    else:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="👤 Заказчик", callback_data="role_customer"),
+                InlineKeyboardButton(text="🚚 Водитель", callback_data="role_driver")
+            ]
+        ])
+        
+        await message.answer(
+            "🎉 **Добро пожаловать в FreightHub!** 🎉\n"
+            "*Ваш надежный сервис грузоперевозок*\n\n"
+            "🔹 **Для заказчиков:**\n"
+            "📦 Создавайте заявки на перевозку груза\n"
+            "💰 Водители предложат свои цены за 5 минут\n"
+            "🏆 Система автоматически выберет лучшее предложение\n"
+            "📱 Получите контакты победителя\n\n"
+            "🔹 **Для водителей:**\n" 
+            "🔔 Получайте уведомления о новых заявках\n"
+            "⚡ Участвуйте в быстрых аукционах\n"
+            "💵 Выигрывайте заявки с конкурентной ценой\n"
+            "� Управляйте несколькими машинами\n\n"
+            "👋 **Выберите вашу роль для начала работы:**",
+            reply_markup=keyboard
+        )
+        await state.set_state(RegistrationStates.choosing_role)
+
 @router.callback_query(F.data == "start_registration")
 async def start_registration(callback: CallbackQuery, state: FSMContext):
     """Обработчик кнопки 'Начать работу' (deprecated - не используется)"""
