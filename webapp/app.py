@@ -402,8 +402,7 @@ def get_driver_orders():
     # В процессе выполнения (где этот водитель - исполнитель)
     in_progress_orders = conn.execute(
         '''SELECT o.*, b.price as my_bid_price, u.name as customer_name, 
-                  u.phone_number as customer_phone, u.telegram_id as customer_telegram_id,
-                  u.username as customer_username
+                  u.phone_number as customer_phone, u.telegram_id as customer_telegram_id
            FROM orders o
            JOIN bids b ON o.id = b.order_id
            JOIN users u ON o.customer_id = u.id
@@ -493,7 +492,7 @@ def get_order_details(order_id):
     conn = get_db_connection()
     
     order = conn.execute(
-        '''SELECT o.*, u.first_name, u.last_name, u.username, u.phone
+        '''SELECT o.*, u.name, u.phone_number
            FROM orders o
            JOIN users u ON o.customer_id = u.id
            WHERE o.id = ?''',
@@ -695,7 +694,7 @@ def select_auction_winner(order_id):
     
     # Получаем информацию о выбранной ставке
     bid = conn.execute(
-        '''SELECT b.*, d.telegram_id as driver_telegram_id, d.username as driver_username,
+        '''SELECT b.*, d.telegram_id as driver_telegram_id,
                   d.phone_number as driver_phone, d.name as driver_name
            FROM bids b
            JOIN users d ON b.driver_id = d.id
@@ -720,7 +719,7 @@ def select_auction_winner(order_id):
     
     # Получаем данные заказчика
     customer = conn.execute(
-        'SELECT username, phone_number FROM users WHERE telegram_id = ?',
+        'SELECT phone_number FROM users WHERE telegram_id = ?',
         (telegram_id,)
     ).fetchone()
     
@@ -734,12 +733,12 @@ def select_auction_winner(order_id):
             order_id=order_id,
             winner_telegram_id=bid['driver_telegram_id'],
             winner_user_id=bid['driver_id'],
-            winner_username=bid['driver_username'],
+            winner_username=None,
             winning_price=bid['price'],
             cargo_description=order['cargo_description'],
             delivery_address=order['delivery_address'],
             customer_user_id=telegram_id,
-            customer_username=customer['username'] if customer else None,
+            customer_username=None,
             customer_phone=customer['phone_number'] if customer else '',
             driver_phone=bid['driver_phone']
         )
