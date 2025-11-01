@@ -68,7 +68,8 @@ async def webhook_new_order(request):
             max_price=max_price,
             pickup_address=data.get('pickup_address'),
             pickup_time=data.get('pickup_time'),
-            delivery_time=data.get('delivery_time')
+            delivery_time=data.get('delivery_time'),
+            delivery_date=data.get('delivery_date')
         )
         
         logger.info(f"Webhook: Отправлены уведомления о заявке #{data['order_id']} ({count} водителей)")

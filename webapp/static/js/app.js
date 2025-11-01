@@ -24,6 +24,50 @@ let ordersCache = null; // Кэш заказов
 let ordersCacheTime = 0; // Время последнего обновления кэша
 const CACHE_DURATION = 30000; // 30 секунд
 
+// Функция для форматирования даты/времени из UTC в локальное время
+function formatLocalDateTime(utcDateString) {
+    if (!utcDateString) return '';
+    
+    try {
+        const date = new Date(utcDateString);
+        
+        // Форматируем дату и время по местному часовому поясу
+        const options = {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        };
+        
+        return date.toLocaleString('ru-RU', options);
+    } catch (e) {
+        console.error('Ошибка форматирования даты:', e);
+        return utcDateString;
+    }
+}
+
+// Функция для форматирования только даты
+function formatLocalDate(utcDateString) {
+    if (!utcDateString) return '';
+    
+    try {
+        const date = new Date(utcDateString);
+        
+        const options = {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        };
+        
+        return date.toLocaleDateString('ru-RU', options);
+    } catch (e) {
+        console.error('Ошибка форматирования даты:', e);
+        return utcDateString;
+    }
+}
+
 // Получаем данные пользователя из Telegram
 function getTelegramUser() {
     if (!tg || !tg.initDataUnsafe) {
@@ -360,13 +404,15 @@ function initTabs() {
         tabs = [
             { id: 'searching', label: 'Поиск исполнителей', icon: '🔍' },
             { id: 'created', label: 'Созданные', icon: '📝' },
-            { id: 'completed', label: 'Завершенные', icon: '✅' }
+            { id: 'in_progress', label: 'В процессе', icon: '🚚' },
+            { id: 'closed', label: 'Закрытые', icon: '✅' }
         ];
     } else {
         tabs = [
             { id: 'open', label: 'Открытые', icon: '📋' },
             { id: 'my_bids', label: 'Мои предложения', icon: '💰' },
             { id: 'won', label: 'Выигранные', icon: '🏆' },
+            { id: 'in_progress', label: 'В процессе', icon: '🚚' },
             { id: 'closed', label: 'Закрытые', icon: '📁' }
         ];
     }

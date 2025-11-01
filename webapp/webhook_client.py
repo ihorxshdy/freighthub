@@ -27,7 +27,7 @@ def send_webhook(endpoint, data):
 
 
 def notify_new_order(order_id, truck_type, cargo_description, delivery_address, max_price, 
-                     pickup_address=None, pickup_time=None, delivery_time=None):
+                     pickup_address=None, pickup_time=None, delivery_time=None, delivery_date=None):
     """Уведомить водителей о новой заявке"""
     return send_webhook('/webhook/new-order', {
         'order_id': order_id,
@@ -37,7 +37,8 @@ def notify_new_order(order_id, truck_type, cargo_description, delivery_address, 
         'max_price': max_price,
         'pickup_address': pickup_address,
         'pickup_time': pickup_time,
-        'delivery_time': delivery_time
+        'delivery_time': delivery_time,
+        'delivery_date': delivery_date
     })
 
 

@@ -9,7 +9,7 @@ from bot.webapp_config import WEBAPP_URL
 
 from typing import Optional
 
-async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, cargo_description: str, delivery_address: str, max_price: Optional[float] = None, pickup_address: Optional[str] = None, pickup_time: Optional[str] = None, delivery_time: Optional[str] = None):
+async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, cargo_description: str, delivery_address: str, max_price: Optional[float] = None, pickup_address: Optional[str] = None, pickup_time: Optional[str] = None, delivery_time: Optional[str] = None, delivery_date: Optional[str] = None):
     """
     Уведомляет всех водителей о новой заявке
     
@@ -23,27 +23,30 @@ async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, car
         pickup_address: Адрес подачи (может быть None)
         pickup_time: Время подачи (может быть None)
         delivery_time: Время доставки (может быть None)
+        delivery_date: Дата доставки (может быть None)
     """
     drivers = await get_all_drivers()
     truck_name = get_truck_display_name(truck_type)
     
     # Формируем текст сообщения
-    price_text = f"Максимальная цена: {max_price} руб.\n" if max_price else ""
-    pickup_text = f"Адрес подачи: {pickup_address}\n" if pickup_address else ""
-    pickup_time_text = f"Время подачи: {pickup_time}\n" if pickup_time else ""
-    delivery_time_text = f"Время доставки: {delivery_time}\n" if delivery_time else ""
+    price_text = f"💰 Максимальная цена: {max_price} руб.\n" if max_price else ""
+    pickup_text = f"📍 Адрес подачи: {pickup_address}\n" if pickup_address else ""
+    pickup_time_text = f"🕐 Время подачи: {pickup_time}\n" if pickup_time else ""
+    delivery_time_text = f"🕐 Время доставки: {delivery_time}\n" if delivery_time else ""
+    delivery_date_text = f"📅 Дата доставки: {delivery_date}\n" if delivery_date else ""
     
     message_text = (
-        f"Новая заявка #{order_id}\n\n"
-        f"Тип машины: {truck_name}\n"
-        f"Груз: {cargo_description}\n"
+        f"🔔 Новая заявка #{order_id}\n\n"
+        f"🚛 Тип машины: {truck_name}\n"
+        f"📦 Груз: {cargo_description}\n"
         f"{pickup_text}"
         f"{pickup_time_text}"
-        f"Адрес доставки: {delivery_address}\n"
+        f"📍 Адрес доставки: {delivery_address}\n"
         f"{delivery_time_text}"
+        f"{delivery_date_text}"
         f"{price_text}\n"
-        f"Аукцион длится 15 минут!\n"
-        f"Откройте приложение для участия"
+        f"⏰ Аукцион длится 15 минут!\n"
+        f"👉 Откройте приложение для участия"
     )
     
     # Отправляем уведомление всем водителям

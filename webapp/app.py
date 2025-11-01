@@ -262,8 +262,8 @@ def create_order():
             '''INSERT INTO orders (
                 customer_id, truck_type, cargo_description, delivery_address,
                 status, created_at, expires_at,
-                pickup_address, pickup_time, delivery_time
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                pickup_address, pickup_time, delivery_time, max_price, delivery_date
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
             (
                 user['id'],  # customer_id - это users.id
                 data['truck_type_id'],  # truck_type - строка вида "manipulator_5t"
@@ -274,7 +274,9 @@ def create_order():
                 expires_at,
                 data.get('pickup_location'),  # pickup_address
                 data.get('pickup_time'),  # pickup_time
-                data.get('delivery_time')  # delivery_time
+                data.get('delivery_time'),  # delivery_time
+                data.get('price', 0),  # max_price
+                data.get('delivery_date')  # delivery_date
             )
         )
         
@@ -295,7 +297,8 @@ def create_order():
                 max_price=data.get('price', 0),
                 pickup_address=data.get('pickup_location'),
                 pickup_time=data.get('pickup_time'),
-                delivery_time=data.get('delivery_time')
+                delivery_time=data.get('delivery_time'),
+                delivery_date=data.get('delivery_date')
             )
             logger.info(f"✅ Webhook sent successfully")
         except Exception as e:
@@ -353,10 +356,11 @@ def get_driver_orders():
         return jsonify({'error': 'User not found'}), 404
     
     result = {
-        'open': [],       # Открытые заявки (можно сделать предложение)
-        'my_bids': [],    # Заявки с моими предложениями
-        'won': [],        # Выигранные заявки
-        'closed': []      # Закрытые заявки
+        'open': [],         # Открытые заявки (можно сделать предложение)
+        'my_bids': [],      # Заявки с моими предложениями
+        'won': [],          # Выигранные заявки (пока аукцион активен)
+        'in_progress': [],  # В процессе выполнения
+        'closed': []        # Закрытые заявки
     }
     
     # Получаем открытые заявки (без предложений от этого водителя)
@@ -376,7 +380,7 @@ def get_driver_orders():
         (user['id'],)
     ).fetchall()
     
-    # Заявки с предложениями от водителя
+    # Заявки с предложениями от водителя (аукцион еще идет)
     my_bids_orders = conn.execute(
         '''SELECT o.*, b.price as my_bid_price, b.id as bid_id,
                   COUNT(DISTINCT b2.id) as total_bids,
@@ -385,22 +389,26 @@ def get_driver_orders():
            JOIN bids b ON o.id = b.order_id
            LEFT JOIN bids b2 ON o.id = b2.order_id
            WHERE b.driver_id = ? 
-            
              AND o.status = 'active'
            GROUP BY o.id
            ORDER BY o.created_at DESC''',
         (user['id'],)
     ).fetchall()
     
-    # Выигранные заявки (только где этот водитель - победитель)
-    won_orders = conn.execute(
+    # Выигранные заявки (аукцион завершен, этот водитель победитель, но еще не начата работа)
+    # Оставляем пустым - они сразу переходят в in_progress
+    won_orders = []
+    
+    # В процессе выполнения (где этот водитель - исполнитель)
+    in_progress_orders = conn.execute(
         '''SELECT o.*, b.price as my_bid_price, u.name as customer_name, 
-                  u.phone_number as customer_phone, u.telegram_id as customer_telegram_id
+                  u.phone_number as customer_phone, u.telegram_id as customer_telegram_id,
+                  u.username as customer_username
            FROM orders o
            JOIN bids b ON o.id = b.order_id
            JOIN users u ON o.customer_id = u.id
            WHERE o.winner_driver_id = ? 
-             AND o.status = 'completed'
+             AND o.status = 'in_progress'
            ORDER BY o.created_at DESC''',
         (user['id'],)
     ).fetchall()
@@ -410,7 +418,7 @@ def get_driver_orders():
         '''SELECT o.*, b.price as my_bid_price
            FROM orders o
            LEFT JOIN bids b ON o.id = b.order_id AND b.driver_id = ?
-           WHERE (o.status = 'completed' OR o.status = 'cancelled')
+           WHERE o.status = 'closed'
              AND b.id IS NOT NULL
            ORDER BY o.created_at DESC
            LIMIT 20''',
@@ -422,6 +430,7 @@ def get_driver_orders():
     result['open'] = [dict_from_row(order) for order in open_orders]
     result['my_bids'] = [dict_from_row(order) for order in my_bids_orders]
     result['won'] = [dict_from_row(order) for order in won_orders]
+    result['in_progress'] = [dict_from_row(order) for order in in_progress_orders]
     result['closed'] = [dict_from_row(order) for order in closed_orders]
     
     return jsonify(result)
@@ -647,6 +656,104 @@ def cancel_order(order_id):
         'message': 'Order cancelled',
         'status': 'closed',
         'cancelled_by': 'customer' if is_customer else 'driver'
+    })
+
+@app.route('/api/orders/<int:order_id>/select-winner', methods=['POST'])
+def select_auction_winner(order_id):
+    """Ручной выбор исполнителя заказчиком (досрочное завершение аукциона)"""
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    bid_id = data.get('bid_id')
+    
+    if not telegram_id or not bid_id:
+        return jsonify({'error': 'telegram_id and bid_id are required'}), 400
+    
+    conn = get_db_connection()
+    
+    # Получаем заказ
+    order = conn.execute(
+        '''SELECT o.*, c.telegram_id as customer_telegram_id
+           FROM orders o
+           JOIN users c ON o.customer_id = c.id
+           WHERE o.id = ?''',
+        (order_id,)
+    ).fetchone()
+    
+    if not order:
+        conn.close()
+        return jsonify({'error': 'Order not found'}), 404
+    
+    # Проверяем, что пользователь - заказчик этой заявки
+    if telegram_id != order['customer_telegram_id']:
+        conn.close()
+        return jsonify({'error': 'Only order creator can select winner'}), 403
+    
+    # Проверяем, что заявка активна
+    if order['status'] != 'active':
+        conn.close()
+        return jsonify({'error': 'Order is not active'}), 400
+    
+    # Получаем информацию о выбранной ставке
+    bid = conn.execute(
+        '''SELECT b.*, d.telegram_id as driver_telegram_id, d.username as driver_username,
+                  d.phone_number as driver_phone, d.name as driver_name
+           FROM bids b
+           JOIN users d ON b.driver_id = d.id
+           WHERE b.id = ? AND b.order_id = ?''',
+        (bid_id, order_id)
+    ).fetchone()
+    
+    if not bid:
+        conn.close()
+        return jsonify({'error': 'Bid not found'}), 404
+    
+    # Обновляем заказ: устанавливаем победителя и статус in_progress
+    conn.execute(
+        '''UPDATE orders 
+           SET status = 'in_progress', 
+               winner_driver_id = ?,
+               winning_price = ?
+           WHERE id = ?''',
+        (bid['driver_id'], bid['price'], order_id)
+    )
+    conn.commit()
+    
+    # Получаем данные заказчика
+    customer = conn.execute(
+        'SELECT username, phone_number FROM users WHERE telegram_id = ?',
+        (telegram_id,)
+    ).fetchone()
+    
+    conn.close()
+    
+    # Отправляем уведомление выбранному водителю через webhook
+    try:
+        from webhook_client import notify_auction_complete
+        
+        notify_auction_complete(
+            order_id=order_id,
+            winner_telegram_id=bid['driver_telegram_id'],
+            winner_user_id=bid['driver_id'],
+            winner_username=bid['driver_username'],
+            winning_price=bid['price'],
+            cargo_description=order['cargo_description'],
+            delivery_address=order['delivery_address'],
+            customer_user_id=telegram_id,
+            customer_username=customer['username'] if customer else None,
+            customer_phone=customer['phone_number'] if customer else '',
+            driver_phone=bid['driver_phone']
+        )
+    except Exception as e:
+        logger.error(f"Failed to send webhook notification: {e}")
+    
+    return jsonify({
+        'success': True,
+        'message': 'Winner selected, order moved to in_progress',
+        'winner': {
+            'driver_id': bid['driver_id'],
+            'driver_name': bid['driver_name'],
+            'price': bid['price']
+        }
     })
 
 @app.route('/api/debug/db-info', methods=['GET'])
