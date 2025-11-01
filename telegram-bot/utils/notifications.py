@@ -85,8 +85,11 @@ async def notify_auction_winner(bot: Bot, order_id: int, winner_telegram_id: int
         print(f"Не найден победитель с telegram_id {winner_telegram_id}")
         return False
     
-    # Формируем ссылку на заказчика
-    customer_link = f"@{customer_username}" if customer_username else customer_phone
+    # Формируем контактную информацию
+    if customer_username:
+        contact_info = f"Telegram: @{customer_username}\nТелефон: {customer_phone}"
+    else:
+        contact_info = f"Телефон: {customer_phone}"
     
     message_text = (
         f"Поздравляем! Вы выиграли аукцион!\n\n"
@@ -94,8 +97,7 @@ async def notify_auction_winner(bot: Bot, order_id: int, winner_telegram_id: int
         f"Груз: {cargo_description}\n"
         f"Адрес доставки: {delivery_address}\n"
         f"Ваша цена: {winning_price} руб.\n\n"
-        f"Телефон заказчика: {customer_phone}\n"
-        f"Контакт: {customer_link}\n\n"
+        f"{contact_info}\n\n"
         f"Свяжитесь с заказчиком для уточнения деталей!"
     )
     
@@ -211,16 +213,18 @@ async def notify_customer_auction_complete(bot: Bot, order_id: int, customer_use
         print(f"Не найден заказчик с telegram_id {customer_user_id}")
         return False
     
-    # Формируем ссылку на водителя
-    driver_link = f"@{driver_username}" if driver_username else driver_phone
+    # Формируем контактную информацию
+    if driver_username:
+        contact_info = f"Telegram: @{driver_username}\nТелефон: {driver_phone}"
+    else:
+        contact_info = f"Телефон: {driver_phone}"
     
     message_text = (
         f"Аукцион завершен!\n\n"
         f"Заявка #{order_id}\n"
         f"Груз: {cargo_description}\n"
         f"Выигрышная цена: {winning_price} руб.\n\n"
-        f"Телефон водителя: {driver_phone}\n"
-        f"Контакт: {driver_link}\n\n"
+        f"{contact_info}\n\n"
         f"Свяжитесь с водителем для уточнения деталей перевозки!"
     )
     

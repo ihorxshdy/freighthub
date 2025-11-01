@@ -192,9 +192,10 @@ async def webhook_order_confirmed(request):
     Ожидаемые данные:
     {
         "order_id": 123,
-        "confirmed_by": "customer",  # или "driver"
-        "notify_telegram_id": 12345,  # telegram_id стороны, которую нужно уведомить
-        "cargo_description": "Мебель для переезда"
+        "confirmed_by_telegram_id": 12345,
+        "confirmed_by_role": "customer",  # или "driver"
+        "customer_telegram_id": 12345,
+        "driver_telegram_id": 67890
     }
     """
     if not await verify_webhook_token(request):
@@ -205,17 +206,30 @@ async def webhook_order_confirmed(request):
         bot = request.app['bot']
         
         # Валидация обязательных данных
-        required = ['order_id', 'confirmed_by', 'notify_telegram_id', 'cargo_description']
+        required = ['order_id', 'confirmed_by_role', 'customer_telegram_id', 'driver_telegram_id']
         if not all(field in data for field in required):
             return web.json_response({'error': 'Missing required fields'}, status=400)
+        
+        # Получаем информацию о заказе для описания груза
+        from database.models import get_db_connection
+        conn = get_db_connection()
+        order = conn.execute('SELECT cargo_description FROM orders WHERE id = ?', (data['order_id'],)).fetchone()
+        cargo_description = order['cargo_description'] if order else "Заказ"
+        conn.close()
+        
+        # Определяем кому отправить уведомление
+        if data['confirmed_by_role'] == 'customer':
+            notify_telegram_id = data['driver_telegram_id']
+        else:
+            notify_telegram_id = data['customer_telegram_id']
         
         # Отправляем уведомление другой стороне
         await notify_order_confirmed(
             bot=bot,
-            telegram_id=data['notify_telegram_id'],
+            telegram_id=notify_telegram_id,
             order_id=data['order_id'],
-            confirmed_by=data['confirmed_by'],
-            cargo_description=data['cargo_description']
+            confirmed_by=data['confirmed_by_role'],
+            cargo_description=cargo_description
         )
         
         logger.info(f"Webhook: Отправлено уведомление о подтверждении заказа #{data['order_id']}")
@@ -234,7 +248,8 @@ async def webhook_order_cancelled(request):
     Ожидаемые данные:
     {
         "order_id": 123,
-        "cancelled_by": "customer",  # или "driver"
+        "cancelled_by_telegram_id": 12345,
+        "cancelled_by_role": "customer",  # или "driver"
         "customer_telegram_id": 12345,
         "driver_telegram_id": 67890,
         "cargo_description": "Мебель для переезда"
@@ -248,7 +263,7 @@ async def webhook_order_cancelled(request):
         bot = request.app['bot']
         
         # Валидация обязательных данных
-        required = ['order_id', 'cancelled_by', 'customer_telegram_id', 'driver_telegram_id', 'cargo_description']
+        required = ['order_id', 'cancelled_by_role', 'customer_telegram_id', 'driver_telegram_id', 'cargo_description']
         if not all(field in data for field in required):
             return web.json_response({'error': 'Missing required fields'}, status=400)
         
@@ -257,7 +272,7 @@ async def webhook_order_cancelled(request):
             bot=bot,
             telegram_id=data['customer_telegram_id'],
             order_id=data['order_id'],
-            cancelled_by=data['cancelled_by'],
+            cancelled_by=data['cancelled_by_role'],
             cargo_description=data['cargo_description']
         )
         
@@ -265,7 +280,7 @@ async def webhook_order_cancelled(request):
             bot=bot,
             telegram_id=data['driver_telegram_id'],
             order_id=data['order_id'],
-            cancelled_by=data['cancelled_by'],
+            cancelled_by=data['cancelled_by_role'],
             cargo_description=data['cargo_description']
         )
         
