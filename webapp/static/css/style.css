@@ -149,12 +149,36 @@ body {
     background: var(--tg-theme-secondary-bg-color);
     padding: 15px 20px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
 }
 
 .user-info {
     display: flex;
     align-items: center;
     gap: 12px;
+    flex: 1;
+}
+
+.admin-contact-btn {
+    background: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);
+}
+
+.admin-contact-btn:active {
+    transform: scale(0.95);
+    box-shadow: 0 1px 4px rgba(255, 68, 68, 0.3);
 }
 
 .user-avatar {

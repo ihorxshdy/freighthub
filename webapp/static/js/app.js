@@ -976,3 +976,16 @@ function showError(message) {
         alert(message);
     }
 }
+
+// Открыть чат с администратором
+function contactAdmin() {
+    const adminUserId = 643813567;
+    const url = `https://t.me/${adminUserId}`;
+    
+    if (tg && tg.openTelegramLink) {
+        tg.openTelegramLink(url);
+    } else {
+        window.open(url, '_blank');
+    }
+}
+

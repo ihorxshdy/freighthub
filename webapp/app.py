@@ -404,12 +404,12 @@ def get_driver_orders():
         '''SELECT o.*, b.price as my_bid_price, u.name as customer_name, 
                   u.phone_number as customer_phone, u.telegram_id as customer_telegram_id
            FROM orders o
-           JOIN bids b ON o.id = b.order_id
+           JOIN bids b ON o.id = b.order_id AND b.driver_id = ?
            JOIN users u ON o.customer_id = u.id
            WHERE o.winner_driver_id = ? 
              AND o.status = 'in_progress'
            ORDER BY o.created_at DESC''',
-        (user['id'],)
+        (user['id'], user['id'])
     ).fetchall()
     
     # Закрытые заявки
