@@ -658,7 +658,8 @@ function initModals() {
                 description: document.getElementById('description').value,
                 cargo_weight: document.getElementById('cargo-weight').value || null,
                 cargo_volume: document.getElementById('cargo-volume').value || null,
-                price: document.getElementById('price').value || null
+                price: document.getElementById('price').value || null,
+                delivery_date: document.getElementById('delivery-date').value || null
             };
             
             try {

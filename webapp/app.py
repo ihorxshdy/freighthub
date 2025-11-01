@@ -427,11 +427,11 @@ def get_driver_orders():
     
     conn.close()
     
-    result['open'] = [dict_from_row(order) for order in open_orders]
-    result['my_bids'] = [dict_from_row(order) for order in my_bids_orders]
-    result['won'] = [dict_from_row(order) for order in won_orders]
-    result['in_progress'] = [dict_from_row(order) for order in in_progress_orders]
-    result['closed'] = [dict_from_row(order) for order in closed_orders]
+    result['open'] = [dict_from_row(order) for order in open_orders] if open_orders else []
+    result['my_bids'] = [dict_from_row(order) for order in my_bids_orders] if my_bids_orders else []
+    result['won'] = [dict_from_row(order) for order in won_orders] if won_orders else []
+    result['in_progress'] = [dict_from_row(order) for order in in_progress_orders] if in_progress_orders else []
+    result['closed'] = [dict_from_row(order) for order in closed_orders] if closed_orders else []
     
     return jsonify(result)
 
