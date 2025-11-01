@@ -25,6 +25,7 @@ def init_database():
             role TEXT NOT NULL CHECK (role IN ('customer', 'driver')),
             truck_type TEXT,
             name TEXT,
+            username TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)

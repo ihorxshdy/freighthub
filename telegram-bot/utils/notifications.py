@@ -62,7 +62,7 @@ async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, car
     return sent_count
 
 
-async def notify_auction_winner(bot: Bot, order_id: int, winner_telegram_id: int, winning_price: float, cargo_description: str, delivery_address: str, customer_phone: str):
+async def notify_auction_winner(bot: Bot, order_id: int, winner_telegram_id: int, winning_price: float, cargo_description: str, delivery_address: str, customer_phone: str, customer_username: Optional[str] = None):
     """
     Уведомляет победителя аукциона
     
@@ -74,6 +74,7 @@ async def notify_auction_winner(bot: Bot, order_id: int, winner_telegram_id: int
         cargo_description: Описание груза
         delivery_address: Адрес доставки
         customer_phone: Телефон заказчика
+        customer_username: Username заказчика (опционально)
     """
     winner = await get_user_by_telegram_id(winner_telegram_id)
     
@@ -81,13 +82,17 @@ async def notify_auction_winner(bot: Bot, order_id: int, winner_telegram_id: int
         print(f"Не найден победитель с telegram_id {winner_telegram_id}")
         return False
     
+    # Формируем ссылку на заказчика
+    customer_link = f"@{customer_username}" if customer_username else customer_phone
+    
     message_text = (
         f"🎉 Поздравляем! Вы выиграли аукцион!\n\n"
         f"📦 Заявка #{order_id}\n"
         f"📝 Груз: {cargo_description}\n"
         f"📍 Адрес доставки: {delivery_address}\n"
         f"💰 Ваша цена: {winning_price} руб.\n\n"
-        f"📞 Телефон заказчика: {customer_phone}\n\n"
+        f"📞 Телефон заказчика: {customer_phone}\n"
+        f"👤 Контакт: {customer_link}\n\n"
         f"👉 Свяжитесь с заказчиком для уточнения деталей!"
     )
     
@@ -184,7 +189,7 @@ async def notify_customer_no_bids(bot: Bot, order_id: int, customer_user_id: int
         return False
 
 
-async def notify_customer_auction_complete(bot: Bot, order_id: int, customer_user_id: int, cargo_description: str, winning_price: float, driver_phone: str):
+async def notify_customer_auction_complete(bot: Bot, order_id: int, customer_user_id: int, cargo_description: str, winning_price: float, driver_phone: str, driver_username: Optional[str] = None):
     """
     Уведомляет заказчика о завершении аукциона и победителе
     
@@ -195,6 +200,7 @@ async def notify_customer_auction_complete(bot: Bot, order_id: int, customer_use
         cargo_description: Описание груза
         winning_price: Выигрышная цена
         driver_phone: Телефон водителя-победителя
+        driver_username: Username водителя (опционально)
     """
     customer = await get_user_by_telegram_id(customer_user_id)
     
@@ -202,12 +208,16 @@ async def notify_customer_auction_complete(bot: Bot, order_id: int, customer_use
         print(f"Не найден заказчик с telegram_id {customer_user_id}")
         return False
     
+    # Формируем ссылку на водителя
+    driver_link = f"@{driver_username}" if driver_username else driver_phone
+    
     message_text = (
         f"✅ Аукцион завершен!\n\n"
         f"📦 Заявка #{order_id}\n"
         f"📝 Груз: {cargo_description}\n"
         f"💰 Выигрышная цена: {winning_price} руб.\n\n"
-        f"📞 Телефон водителя: {driver_phone}\n\n"
+        f"📞 Телефон водителя: {driver_phone}\n"
+        f"👤 Контакт: {driver_link}\n\n"
         f"👉 Свяжитесь с водителем для уточнения деталей перевозки!"
     )
     

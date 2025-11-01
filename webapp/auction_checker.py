@@ -50,14 +50,14 @@ def check_expired_auctions():
             
             # Получаем данные победителя
             winner = cursor.execute('''
-                SELECT id, telegram_id, name, phone_number
+                SELECT id, telegram_id, name, phone_number, username
                 FROM users
                 WHERE id = ?
             ''', (winning_bid['driver_id'],)).fetchone()
             
             # Получаем данные заказчика
             customer = cursor.execute('''
-                SELECT id, telegram_id, phone_number
+                SELECT id, telegram_id, phone_number, username
                 FROM users
                 WHERE id = ?
             ''', (order['customer_id'],)).fetchone()
@@ -79,10 +79,12 @@ def check_expired_auctions():
                     order_id=order_id,
                     winner_telegram_id=winner['telegram_id'],
                     winner_user_id=winner['id'],
+                    winner_username=winner['username'],
                     winning_price=winning_bid['price'],
                     cargo_description=order['cargo_description'],
                     delivery_address=order['delivery_address'],
                     customer_user_id=customer['telegram_id'],
+                    customer_username=customer['username'],
                     customer_phone=customer['phone_number'],
                     driver_phone=winner['phone_number']
                 )
