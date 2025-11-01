@@ -24,14 +24,19 @@ async def setup_bot_commands(bot: Bot):
     
     await bot.set_my_commands(commands)
     
-    # Отключаем Menu Button (кнопку под строкой ввода)
+    # Устанавливаем WebApp кнопку вместо меню команд
     try:
-        from aiogram.types import MenuButtonCommands
-        # Устанавливаем обычное меню команд вместо WebApp
-        await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
-        logger.info("✅ Menu Button изменена на Commands (показывает список команд)")
+        from aiogram.types import MenuButtonWebApp, WebAppInfo
+        from bot.webapp_config import WEBAPP_URL
+        
+        menu_button = MenuButtonWebApp(
+            text="Открыть приложение",
+            web_app=WebAppInfo(url=WEBAPP_URL)
+        )
+        await bot.set_chat_menu_button(menu_button=menu_button)
+        logger.info("Menu Button изменена на WebApp")
     except Exception as e:
-        logger.warning(f"⚠️ Не удалось изменить Menu Button: {e}")
+        logger.warning(f"Не удалось изменить Menu Button: {e}")
     
     # Настройка описания бота
     try:
