@@ -979,17 +979,13 @@ function showError(message) {
 
 // Открыть чат с администратором
 function contactAdmin() {
-    const adminUserId = 643813567;
-    // Используем специальный URL для открытия чата по user_id в Telegram WebApp
-    const url = `tg://openmessage?user_id=${adminUserId}`;
+    const message = "Здравствуйте! Хотел бы сообщить о проблеме с приложением FreightHub.";
+    const url = `https://t.me/mosdefkweli?text=${encodeURIComponent(message)}`;
     
     if (tg && tg.openTelegramLink) {
         tg.openTelegramLink(url);
-    } else if (tg && tg.openLink) {
-        tg.openLink(url);
     } else {
-        // Fallback - показываем alert с инструкцией
-        alert('Для связи с администратором напишите в Telegram пользователю с ID: ' + adminUserId);
+        window.open(url, '_blank');
     }
 }
 
