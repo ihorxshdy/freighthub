@@ -193,20 +193,28 @@ def get_customer_orders():
     
     # Группируем по статусам
     result = {
-        'searching': [],  # Идет поиск исполнителей
-        'created': [],    # Созданные заявки (без предложений)
-        'completed': []   # Завершенные заявки
+        'searching': [],    # Идет поиск исполнителей (active + есть предложения)
+        'created': [],      # Созданные заявки (active + нет предложений)
+        'in_progress': [],  # В процессе выполнения
+        'closed': []        # Завершенные/отмененные заявки
     }
     
     for order in orders:
         order_data = dict_from_row(order)
+        status = order_data['status']
         
-        if order_data['status'] == 'completed' or order_data['status'] == 'cancelled':
-            result['completed'].append(order_data)
-        elif order_data['bids_count'] > 0:
-            result['searching'].append(order_data)
-        else:
-            result['created'].append(order_data)
+        if status == 'closed':
+            result['closed'].append(order_data)
+        elif status == 'in_progress':
+            result['in_progress'].append(order_data)
+        elif status == 'active':
+            if order_data['bids_count'] > 0:
+                result['searching'].append(order_data)
+            else:
+                result['created'].append(order_data)
+        elif status in ('completed', 'cancelled', 'no_offers'):
+            # Legacy статусы - переводим в closed
+            result['closed'].append(order_data)
     
     return jsonify(result)
 
@@ -488,6 +496,158 @@ def get_order_details(order_id):
     if order:
         return jsonify(dict_from_row(order))
     return jsonify({'error': 'Order not found'}), 404
+
+@app.route('/api/orders/<int:order_id>/confirm-completion', methods=['POST'])
+def confirm_order_completion(order_id):
+    """Подтверждение выполнения заказа одной из сторон"""
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    
+    if not telegram_id:
+        return jsonify({'error': 'telegram_id is required'}), 400
+    
+    conn = get_db_connection()
+    
+    # Получаем заказ
+    order = conn.execute(
+        '''SELECT o.*, 
+                  c.telegram_id as customer_telegram_id,
+                  d.telegram_id as driver_telegram_id,
+                  d.name as driver_name,
+                  c.name as customer_name
+           FROM orders o
+           JOIN users c ON o.customer_id = c.id
+           LEFT JOIN users d ON o.winner_driver_id = d.id
+           WHERE o.id = ?''',
+        (order_id,)
+    ).fetchone()
+    
+    if not order:
+        conn.close()
+        return jsonify({'error': 'Order not found'}), 404
+    
+    if order['status'] != 'in_progress':
+        conn.close()
+        return jsonify({'error': 'Order is not in progress'}), 400
+    
+    # Определяем, кто подтверждает
+    is_customer = (telegram_id == order['customer_telegram_id'])
+    is_driver = (telegram_id == order['driver_telegram_id'])
+    
+    if not is_customer and not is_driver:
+        conn.close()
+        return jsonify({'error': 'You are not a participant of this order'}), 403
+    
+    # Обновляем подтверждение
+    if is_customer:
+        conn.execute('UPDATE orders SET customer_confirmed = TRUE WHERE id = ?', (order_id,))
+        confirmer_role = 'customer'
+        other_telegram_id = order['driver_telegram_id']
+        other_name = order['driver_name']
+    else:
+        conn.execute('UPDATE orders SET driver_confirmed = TRUE WHERE id = ?', (order_id,))
+        confirmer_role = 'driver'
+        other_telegram_id = order['customer_telegram_id']
+        other_name = order['customer_name']
+    
+    conn.commit()
+    
+    # Проверяем, подтвердили ли обе стороны
+    updated_order = conn.execute(
+        'SELECT customer_confirmed, driver_confirmed FROM orders WHERE id = ?',
+        (order_id,)
+    ).fetchone()
+    
+    both_confirmed = updated_order['customer_confirmed'] and updated_order['driver_confirmed']
+    
+    if both_confirmed:
+        # Обе стороны подтвердили - переводим в closed
+        conn.execute('UPDATE orders SET status = ? WHERE id = ?', ('closed', order_id))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Order completed and closed',
+            'status': 'closed',
+            'both_confirmed': True
+        })
+    else:
+        conn.close()
+        
+        # Отправляем уведомление второй стороне через webhook
+        # TODO: Implement webhook notification
+        
+        return jsonify({
+            'success': True,
+            'message': f'Confirmation recorded from {confirmer_role}',
+            'status': 'in_progress',
+            'both_confirmed': False,
+            'awaiting_confirmation_from': 'driver' if confirmer_role == 'customer' else 'customer'
+        })
+
+@app.route('/api/orders/<int:order_id>/cancel', methods=['POST'])
+def cancel_order(order_id):
+    """Отмена заказа одной из сторон"""
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    
+    if not telegram_id:
+        return jsonify({'error': 'telegram_id is required'}), 400
+    
+    conn = get_db_connection()
+    
+    # Получаем заказ
+    order = conn.execute(
+        '''SELECT o.*, 
+                  c.telegram_id as customer_telegram_id,
+                  c.id as customer_user_id,
+                  d.telegram_id as driver_telegram_id,
+                  d.id as driver_user_id
+           FROM orders o
+           JOIN users c ON o.customer_id = c.id
+           LEFT JOIN users d ON o.winner_driver_id = d.id
+           WHERE o.id = ?''',
+        (order_id,)
+    ).fetchone()
+    
+    if not order:
+        conn.close()
+        return jsonify({'error': 'Order not found'}), 404
+    
+    if order['status'] != 'in_progress':
+        conn.close()
+        return jsonify({'error': 'Order is not in progress'}), 400
+    
+    # Определяем, кто отменяет
+    is_customer = (telegram_id == order['customer_telegram_id'])
+    is_driver = (telegram_id == order['driver_telegram_id'])
+    
+    if not is_customer and not is_driver:
+        conn.close()
+        return jsonify({'error': 'You are not a participant of this order'}), 403
+    
+    # Получаем user_id отменяющего
+    cancelled_by_user_id = order['customer_user_id'] if is_customer else order['driver_user_id']
+    
+    # Отменяем заказ
+    conn.execute(
+        '''UPDATE orders 
+           SET status = ?, cancelled_by = ?, cancelled_at = CURRENT_TIMESTAMP 
+           WHERE id = ?''',
+        ('closed', cancelled_by_user_id, order_id)
+    )
+    conn.commit()
+    conn.close()
+    
+    # TODO: Отправить уведомление второй стороне через webhook
+    
+    return jsonify({
+        'success': True,
+        'message': 'Order cancelled',
+        'status': 'closed',
+        'cancelled_by': 'customer' if is_customer else 'driver'
+    })
 
 @app.route('/api/debug/db-info', methods=['GET'])
 def debug_db_info():
