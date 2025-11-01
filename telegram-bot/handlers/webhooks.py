@@ -211,11 +211,13 @@ async def webhook_order_confirmed(request):
             return web.json_response({'error': 'Missing required fields'}, status=400)
         
         # Получаем информацию о заказе для описания груза
-        from database.models import get_db_connection
-        conn = get_db_connection()
-        order = conn.execute('SELECT cargo_description FROM orders WHERE id = ?', (data['order_id'],)).fetchone()
-        cargo_description = order['cargo_description'] if order else "Заказ"
-        conn.close()
+        import aiosqlite
+        from bot.config import DB_PATH
+        async with aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute('SELECT cargo_description FROM orders WHERE id = ?', (data['order_id'],)) as cursor:
+                order = await cursor.fetchone()
+                cargo_description = order['cargo_description'] if order else "Заказ"
         
         # Определяем кому отправить уведомление
         if data['confirmed_by_role'] == 'customer':

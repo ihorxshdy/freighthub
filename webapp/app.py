@@ -253,9 +253,9 @@ def create_order():
         
         logger.info(f"User found: id={user['id']}")
         
-        # Expires_at - через 15 минут от создания
+        # Expires_at - через 10 минут от создания
         from datetime import timedelta
-        expires_at = (datetime.now() + timedelta(minutes=15)).isoformat()
+        expires_at = (datetime.now() + timedelta(minutes=10)).isoformat()
         
         # Создаем заказ по схеме БД бота
         cursor = conn.execute(

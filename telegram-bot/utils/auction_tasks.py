@@ -16,8 +16,8 @@ from utils.notifications import (
 )
 from database.models import get_user_by_id, get_order_by_id
 
-# Длительность аукциона в секундах (5 минут)
-AUCTION_DURATION = 300
+# Длительность аукциона в секундах (10 минут)
+AUCTION_DURATION = 600
 
 # Хранилище для отслеживания заявок, по которым уже отправлены уведомления
 notified_orders = set()

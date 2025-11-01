@@ -29,7 +29,7 @@ async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, car
     truck_name = get_truck_display_name(truck_type)
     
     # Формируем текст сообщения
-    price_text = f"Максимальная цена: {max_price} руб.\n" if max_price else ""
+    price_text = f"Желаемая цена: {max_price} руб.\n" if max_price else ""
     pickup_text = f"Адрес подачи: {pickup_address}\n" if pickup_address else ""
     pickup_time_text = f"Время подачи: {pickup_time}\n" if pickup_time else ""
     delivery_time_text = f"Время доставки: {delivery_time}\n" if delivery_time else ""
@@ -45,7 +45,7 @@ async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, car
         f"{delivery_time_text}"
         f"{delivery_date_text}"
         f"{price_text}\n"
-        f"Аукцион длится 15 минут!\n"
+        f"Аукцион длится 10 минут!\n"
         f"Откройте приложение для участия"
     )
     

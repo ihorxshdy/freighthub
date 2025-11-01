@@ -5,7 +5,7 @@ load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 DB_PATH = os.getenv("DATABASE_PATH", "database/data/delivery.db")
-AUCTION_DURATION = int(os.getenv("AUCTION_DURATION", 300))  # 5 минут (300 секунд)
+AUCTION_DURATION = int(os.getenv("AUCTION_DURATION", 600))  # 10 минут (600 секунд)
 
 # Иерархические типы машин для грузоперевозок
 TRUCK_CATEGORIES = {
