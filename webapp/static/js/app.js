@@ -557,6 +557,8 @@ function renderCustomerOrders(orders, container, tabId) {
             <div class="order-meta">
                 <span>🚛 ${getTruckTypeName(order.truck_type)}</span>
                 <span>📅 ${formatDate(order.created_at)}</span>
+                ${order.delivery_date ? `<span>📦 Доставка: ${order.delivery_date}</span>` : ''}
+                ${order.max_price ? `<span>💰 Желаемая цена: ${formatPrice(order.max_price)}</span>` : ''}
             </div>
             
             ${tabId === 'searching' ? `
@@ -567,6 +569,16 @@ function renderCustomerOrders(orders, container, tabId) {
                     </div>
                     <button class="btn btn-small btn-primary" onclick="viewOrderBids(${order.id})">
                         Смотреть
+                    </button>
+                </div>
+            ` : ''}
+            ${tabId === 'in_progress' ? `
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button class="btn btn-small btn-success" onclick="confirmOrderCompletion(${order.id})" style="flex: 1;">
+                        Подтвердить выполнение
+                    </button>
+                    <button class="btn btn-small btn-danger" onclick="cancelOrder(${order.id})" style="flex: 1;">
+                        Отменить заказ
                     </button>
                 </div>
             ` : ''}
@@ -622,6 +634,16 @@ function renderDriverOrders(orders, container, tabId) {
                     <button class="btn btn-small btn-primary" onclick="openBidModal(${order.id}, '${order.pickup_address}', '${order.delivery_address}', '${order.cargo_description}')">
                         Сделать предложение
                     </button>
+                ` : ''}
+                ${tabId === 'in_progress' ? `
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button class="btn btn-small btn-success" onclick="confirmOrderCompletion(${order.id})" style="flex: 1;">
+                            Подтвердить выполнение
+                        </button>
+                        <button class="btn btn-small btn-danger" onclick="cancelOrder(${order.id})" style="flex: 1;">
+                            Отменить заказ
+                        </button>
+                    </div>
                 ` : ''}
             </div>
         </div>
@@ -803,8 +825,7 @@ window.viewOrderBids = async function(orderId) {
                         <div class="bid-price">${formatPrice(bid.price)}</div>
                     </div>
                     <div class="bid-meta">
-                        <span>📞 ${bid.phone_number}</span>
-                        <span>📅 ${formatDate(bid.created_at)}</span>
+                        <span> ${formatDate(bid.created_at)}</span>
                     </div>
                     <button class="btn btn-primary" onclick="selectWinner(${orderId}, ${bid.id})" style="width: 100%; margin-top: 10px;">
                         Выбрать исполнителем
@@ -842,6 +863,52 @@ window.selectWinner = async function(orderId, bidId) {
     }
 };
 
+window.confirmOrderCompletion = async function(orderId) {
+    try {
+        const response = await fetchWithTimeout(`${API_BASE}api/orders/${orderId}/confirm-completion`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                telegram_id: currentUser.telegram_id
+            })
+        }, 15000);
+        
+        if (!response.ok) {
+            throw new Error('Ошибка подтверждения выполнения');
+        }
+        
+        showSuccess('Выполнение подтверждено!');
+        refreshOrders();
+    } catch (error) {
+        showError('Ошибка подтверждения выполнения');
+    }
+};
+
+window.cancelOrder = async function(orderId) {
+    if (!confirm('Вы уверены, что хотите отменить заказ?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetchWithTimeout(`${API_BASE}api/orders/${orderId}/cancel`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                telegram_id: currentUser.telegram_id
+            })
+        }, 15000);
+        
+        if (!response.ok) {
+            throw new Error('Ошибка отмены заказа');
+        }
+        
+        showSuccess('Заказ отменен');
+        refreshOrders();
+    } catch (error) {
+        showError('Ошибка отмены заказа');
+    }
+};
+
 function showSuccess(message) {
     if (tg && tg.showAlert) {
         tg.showAlert(message);
@@ -858,6 +925,7 @@ function getStatusLabel(status) {
         'open': 'Открыта',
         'my_bids': 'Предложено',
         'won': 'Выиграна',
+        'in_progress': 'В процессе',
         'closed': 'Закрыта'
     };
     return labels[status] || status;
