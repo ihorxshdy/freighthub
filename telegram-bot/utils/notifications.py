@@ -234,3 +234,87 @@ async def notify_customer_auction_complete(bot: Bot, order_id: int, customer_use
     except Exception as e:
         print(f"Не удалось отправить уведомление заказчику: {str(e)}")
         return False
+
+
+async def notify_order_confirmed(bot: Bot, telegram_id: int, order_id: int, confirmed_by: str, cargo_description: str):
+    """
+    Уведомляет сторону о подтверждении выполнения заказа другой стороной
+    
+    Args:
+        bot: Экземпляр бота
+        telegram_id: telegram_id пользователя для уведомления
+        order_id: ID заявки
+        confirmed_by: Кто подтвердил ('customer' или 'driver')
+        cargo_description: Описание груза
+    """
+    user = await get_user_by_telegram_id(telegram_id)
+    
+    if not user:
+        print(f"Не найден пользователь с telegram_id {telegram_id}")
+        return False
+    
+    if confirmed_by == 'customer':
+        confirmer = "Заказчик"
+        action_text = "Подтвердите выполнение заказа в приложении, чтобы закрыть заявку."
+    else:
+        confirmer = "Водитель"
+        action_text = "Подтвердите выполнение заказа в приложении, чтобы закрыть заявку."
+    
+    message_text = (
+        f"Заявка #{order_id}\n\n"
+        f"{confirmer} подтвердил выполнение заказа!\n"
+        f"Груз: {cargo_description}\n\n"
+        f"{action_text}"
+    )
+    
+    try:
+        await bot.send_message(
+            chat_id=telegram_id,
+            text=message_text
+        )
+        print(f"Отправлено уведомление о подтверждении заказа #{order_id} пользователю {telegram_id}")
+        return True
+    except Exception as e:
+        print(f"Не удалось отправить уведомление о подтверждении: {str(e)}")
+        return False
+
+
+async def notify_order_cancelled(bot: Bot, telegram_id: int, order_id: int, cancelled_by: str, cargo_description: str):
+    """
+    Уведомляет пользователя об отмене заказа
+    
+    Args:
+        bot: Экземпляр бота
+        telegram_id: telegram_id пользователя для уведомления
+        order_id: ID заявки
+        cancelled_by: Кто отменил ('customer' или 'driver')
+        cargo_description: Описание груза
+    """
+    user = await get_user_by_telegram_id(telegram_id)
+    
+    if not user:
+        print(f"Не найден пользователь с telegram_id {telegram_id}")
+        return False
+    
+    if cancelled_by == 'customer':
+        canceller = "Заказчик"
+    else:
+        canceller = "Водитель"
+    
+    message_text = (
+        f"Заявка #{order_id} отменена!\n\n"
+        f"{canceller} отменил заказ.\n"
+        f"Груз: {cargo_description}\n\n"
+        f"Заявка закрыта."
+    )
+    
+    try:
+        await bot.send_message(
+            chat_id=telegram_id,
+            text=message_text
+        )
+        print(f"Отправлено уведомление об отмене заказа #{order_id} пользователю {telegram_id}")
+        return True
+    except Exception as e:
+        print(f"Не удалось отправить уведомление об отмене: {str(e)}")
+        return False

@@ -11,7 +11,9 @@ from utils.notifications import (
     notify_auction_winner,
     notify_auction_losers,
     notify_customer_no_bids,
-    notify_customer_auction_complete
+    notify_customer_auction_complete,
+    notify_order_confirmed,
+    notify_order_cancelled
 )
 from utils.helpers import logger
 
@@ -183,6 +185,99 @@ async def webhook_auction_no_bids(request):
         return web.json_response({'error': str(e)}, status=500)
 
 
+async def webhook_order_confirmed(request):
+    """
+    Webhook: одна из сторон подтвердила выполнение заказа
+    
+    Ожидаемые данные:
+    {
+        "order_id": 123,
+        "confirmed_by": "customer",  # или "driver"
+        "notify_telegram_id": 12345,  # telegram_id стороны, которую нужно уведомить
+        "cargo_description": "Мебель для переезда"
+    }
+    """
+    if not await verify_webhook_token(request):
+        return web.json_response({'error': 'Unauthorized'}, status=401)
+    
+    try:
+        data = await request.json()
+        bot = request.app['bot']
+        
+        # Валидация обязательных данных
+        required = ['order_id', 'confirmed_by', 'notify_telegram_id', 'cargo_description']
+        if not all(field in data for field in required):
+            return web.json_response({'error': 'Missing required fields'}, status=400)
+        
+        # Отправляем уведомление другой стороне
+        await notify_order_confirmed(
+            bot=bot,
+            telegram_id=data['notify_telegram_id'],
+            order_id=data['order_id'],
+            confirmed_by=data['confirmed_by'],
+            cargo_description=data['cargo_description']
+        )
+        
+        logger.info(f"Webhook: Отправлено уведомление о подтверждении заказа #{data['order_id']}")
+        
+        return web.json_response({'success': True})
+        
+    except Exception as e:
+        logger.error(f"Ошибка обработки webhook order_confirmed: {e}")
+        return web.json_response({'error': str(e)}, status=500)
+
+
+async def webhook_order_cancelled(request):
+    """
+    Webhook: заказ отменён одной из сторон
+    
+    Ожидаемые данные:
+    {
+        "order_id": 123,
+        "cancelled_by": "customer",  # или "driver"
+        "customer_telegram_id": 12345,
+        "driver_telegram_id": 67890,
+        "cargo_description": "Мебель для переезда"
+    }
+    """
+    if not await verify_webhook_token(request):
+        return web.json_response({'error': 'Unauthorized'}, status=401)
+    
+    try:
+        data = await request.json()
+        bot = request.app['bot']
+        
+        # Валидация обязательных данных
+        required = ['order_id', 'cancelled_by', 'customer_telegram_id', 'driver_telegram_id', 'cargo_description']
+        if not all(field in data for field in required):
+            return web.json_response({'error': 'Missing required fields'}, status=400)
+        
+        # Отправляем уведомления обеим сторонам
+        await notify_order_cancelled(
+            bot=bot,
+            telegram_id=data['customer_telegram_id'],
+            order_id=data['order_id'],
+            cancelled_by=data['cancelled_by'],
+            cargo_description=data['cargo_description']
+        )
+        
+        await notify_order_cancelled(
+            bot=bot,
+            telegram_id=data['driver_telegram_id'],
+            order_id=data['order_id'],
+            cancelled_by=data['cancelled_by'],
+            cargo_description=data['cargo_description']
+        )
+        
+        logger.info(f"Webhook: Отправлены уведомления об отмене заказа #{data['order_id']}")
+        
+        return web.json_response({'success': True})
+        
+    except Exception as e:
+        logger.error(f"Ошибка обработки webhook order_cancelled: {e}")
+        return web.json_response({'error': str(e)}, status=500)
+
+
 async def webhook_health(request):
     """Проверка здоровья webhook сервера"""
     return web.json_response({
@@ -197,5 +292,7 @@ def setup_webhook_handlers(app, bot: Bot):
     app.router.add_post('/webhook/new-order', webhook_new_order)
     app.router.add_post('/webhook/auction-complete', webhook_auction_complete)
     app.router.add_post('/webhook/auction-no-bids', webhook_auction_no_bids)
+    app.router.add_post('/webhook/order-confirmed', webhook_order_confirmed)
+    app.router.add_post('/webhook/order-cancelled', webhook_order_cancelled)
     app.router.add_get('/webhook/health', webhook_health)
     logger.info("Webhook handlers настроены")
