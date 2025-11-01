@@ -67,3 +67,26 @@ def notify_auction_no_bids(order_id, customer_user_id, cargo_description):
         'customer_user_id': customer_user_id,
         'cargo_description': cargo_description
     })
+
+
+def notify_order_confirmed(order_id, confirmed_by_telegram_id, confirmed_by_role, customer_telegram_id, driver_telegram_id):
+    """Уведомить о подтверждении выполнения заказа одной из сторон"""
+    return send_webhook('/webhook/order-confirmed', {
+        'order_id': order_id,
+        'confirmed_by_telegram_id': confirmed_by_telegram_id,
+        'confirmed_by_role': confirmed_by_role,
+        'customer_telegram_id': customer_telegram_id,
+        'driver_telegram_id': driver_telegram_id
+    })
+
+
+def notify_order_cancelled(order_id, cancelled_by_telegram_id, cancelled_by_role, customer_telegram_id, driver_telegram_id, cargo_description):
+    """Уведомить об отмене заказа"""
+    return send_webhook('/webhook/order-cancelled', {
+        'order_id': order_id,
+        'cancelled_by_telegram_id': cancelled_by_telegram_id,
+        'cancelled_by_role': cancelled_by_role,
+        'customer_telegram_id': customer_telegram_id,
+        'driver_telegram_id': driver_telegram_id,
+        'cargo_description': cargo_description
+    })

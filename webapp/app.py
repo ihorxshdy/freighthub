@@ -583,8 +583,18 @@ def confirm_order_completion(order_id):
     else:
         conn.close()
         
-        # Отправляем уведомление второй стороне через webhook
-        # TODO: Implement webhook notification
+        # Отправляем уведомление другой стороне
+        try:
+            from webhook_client import notify_order_confirmed
+            notify_order_confirmed(
+                order_id=order_id,
+                confirmed_by_telegram_id=telegram_id,
+                confirmed_by_role=confirmer_role,
+                customer_telegram_id=order['customer_telegram_id'],
+                driver_telegram_id=order['driver_telegram_id']
+            )
+        except Exception as e:
+            logger.error(f"Failed to send confirmation webhook: {e}")
         
         return jsonify({
             'success': True,
@@ -648,7 +658,19 @@ def cancel_order(order_id):
     conn.commit()
     conn.close()
     
-    # TODO: Отправить уведомление второй стороне через webhook
+    # Отправляем уведомление обеим сторонам
+    try:
+        from webhook_client import notify_order_cancelled
+        notify_order_cancelled(
+            order_id=order_id,
+            cancelled_by_telegram_id=telegram_id,
+            cancelled_by_role='customer' if is_customer else 'driver',
+            customer_telegram_id=order['customer_telegram_id'],
+            driver_telegram_id=order['driver_telegram_id'],
+            cargo_description=order['cargo_description']
+        )
+    except Exception as e:
+        logger.error(f"Failed to send cancellation webhook: {e}")
     
     return jsonify({
         'success': True,
@@ -695,7 +717,8 @@ def select_auction_winner(order_id):
     # Получаем информацию о выбранной ставке
     bid = conn.execute(
         '''SELECT b.*, d.telegram_id as driver_telegram_id,
-                  d.phone_number as driver_phone, d.name as driver_name
+                  d.phone_number as driver_phone, d.name as driver_name,
+                  d.username as driver_username
            FROM bids b
            JOIN users d ON b.driver_id = d.id
            WHERE b.id = ? AND b.order_id = ?''',
@@ -719,7 +742,7 @@ def select_auction_winner(order_id):
     
     # Получаем данные заказчика
     customer = conn.execute(
-        'SELECT phone_number FROM users WHERE telegram_id = ?',
+        'SELECT phone_number, username FROM users WHERE telegram_id = ?',
         (telegram_id,)
     ).fetchone()
     
@@ -733,12 +756,12 @@ def select_auction_winner(order_id):
             order_id=order_id,
             winner_telegram_id=bid['driver_telegram_id'],
             winner_user_id=bid['driver_id'],
-            winner_username=None,
+            winner_username=bid.get('driver_username'),
             winning_price=bid['price'],
             cargo_description=order['cargo_description'],
             delivery_address=order['delivery_address'],
             customer_user_id=telegram_id,
-            customer_username=None,
+            customer_username=customer.get('username') if customer else None,
             customer_phone=customer['phone_number'] if customer else '',
             driver_phone=bid['driver_phone']
         )
