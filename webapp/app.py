@@ -25,6 +25,48 @@ CORS(app)
 # Конфигурация
 app.config['SECRET_KEY'] = SECRET_KEY
 
+def apply_migrations():
+    """Автоматическое применение миграций при старте"""
+    try:
+        import sqlite3
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        
+        # Получаем список колонок в таблице orders
+        cursor.execute("PRAGMA table_info(orders)")
+        existing_columns = {row[1] for row in cursor.fetchall()}
+        
+        # Список миграций
+        migrations = [
+            ('customer_confirmed', 'ALTER TABLE orders ADD COLUMN customer_confirmed BOOLEAN DEFAULT FALSE'),
+            ('driver_confirmed', 'ALTER TABLE orders ADD COLUMN driver_confirmed BOOLEAN DEFAULT FALSE'),
+            ('cancelled_by', 'ALTER TABLE orders ADD COLUMN cancelled_by INTEGER NULL'),
+            ('cancelled_at', 'ALTER TABLE orders ADD COLUMN cancelled_at TIMESTAMP NULL'),
+            ('delivery_date', 'ALTER TABLE orders ADD COLUMN delivery_date TEXT NULL'),
+        ]
+        
+        for column_name, sql in migrations:
+            if column_name not in existing_columns:
+                logger.info(f"🔄 Applying migration: adding column {column_name}")
+                cursor.execute(sql)
+        
+        # Проверяем поле username в users
+        cursor.execute("PRAGMA table_info(users)")
+        user_columns = {row[1] for row in cursor.fetchall()}
+        
+        if 'username' not in user_columns:
+            logger.info("🔄 Applying migration: adding column username to users")
+            cursor.execute('ALTER TABLE users ADD COLUMN username TEXT NULL')
+        
+        conn.commit()
+        conn.close()
+        logger.info("✅ All migrations applied successfully")
+    except Exception as e:
+        logger.error(f"❌ Migration error: {e}")
+
+# Применяем миграции при старте приложения
+apply_migrations()
+
 def get_db_connection():
     """Создание подключения к БД"""
     # Создаём папку для БД если не существует
