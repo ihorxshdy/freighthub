@@ -62,33 +62,33 @@ async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, car
     return sent_count
 
 
-async def notify_auction_winner(bot: Bot, order_id: int, winner_user_id: int, winning_price: float, cargo_description: str, delivery_address: str, customer_phone: str):
+async def notify_auction_winner(bot: Bot, order_id: int, winner_telegram_id: int, winning_price: float, cargo_description: str, delivery_address: str, customer_phone: str):
     """
     Уведомляет победителя аукциона
     
     Args:
         bot: Экземпляр бота
         order_id: ID заявки
-        winner_user_id: telegram_id победителя
+        winner_telegram_id: telegram_id победителя
         winning_price: Выигрышная цена
         cargo_description: Описание груза
         delivery_address: Адрес доставки
         customer_phone: Телефон заказчика
     """
-    winner = await get_user_by_telegram_id(winner_user_id)
+    winner = await get_user_by_telegram_id(winner_telegram_id)
     
     if not winner:
-        print(f"Не найден победитель с telegram_id {winner_user_id}")
+        print(f"Не найден победитель с telegram_id {winner_telegram_id}")
         return False
     
     message_text = (
-        f"Поздравляем! Вы выиграли аукцион!\n\n"
-        f"Заявка #{order_id}\n"
-        f"Груз: {cargo_description}\n"
-        f"Адрес доставки: {delivery_address}\n"
-        f"Ваша цена: {winning_price} руб.\n\n"
-        f"Телефон заказчика: {customer_phone}\n\n"
-        f"Свяжитесь с заказчиком для уточнения деталей!"
+        f"🎉 Поздравляем! Вы выиграли аукцион!\n\n"
+        f"📦 Заявка #{order_id}\n"
+        f"📝 Груз: {cargo_description}\n"
+        f"📍 Адрес доставки: {delivery_address}\n"
+        f"💰 Ваша цена: {winning_price} руб.\n\n"
+        f"📞 Телефон заказчика: {customer_phone}\n\n"
+        f"👉 Свяжитесь с заказчиком для уточнения деталей!"
     )
     
     try:
@@ -96,10 +96,10 @@ async def notify_auction_winner(bot: Bot, order_id: int, winner_user_id: int, wi
             chat_id=winner['telegram_id'],
             text=message_text
         )
-        print(f"Отправлено уведомление победителю заявки #{order_id}")
+        print(f"✅ Отправлено уведомление победителю заявки #{order_id}")
         return True
     except Exception as e:
-        print(f"Не удалось отправить уведомление победителю: {str(e)}")
+        print(f"❌ Не удалось отправить уведомление победителю: {str(e)}")
         return False
 
 
@@ -110,7 +110,7 @@ async def notify_auction_losers(bot: Bot, order_id: int, winner_user_id: int, ca
     Args:
         bot: Экземпляр бота
         order_id: ID заявки
-        winner_user_id: ID победителя (чтобы исключить из уведомлений)
+        winner_user_id: ID победителя в БД (не telegram_id!) для исключения из уведомлений
         cargo_description: Описание груза
     """
     participants = await get_bid_participants(order_id)
@@ -119,15 +119,17 @@ async def notify_auction_losers(bot: Bot, order_id: int, winner_user_id: int, ca
         print(f"Нет участников для заявки #{order_id}")
         return 0
     
-    # Фильтруем победителя (сравниваем telegram_id)
-    losers = [p for p in participants if p['telegram_id'] != winner_user_id]
+    # Фильтруем победителя (сравниваем user_id из БД, не telegram_id!)
+    losers = [p for p in participants if p['user_id'] != winner_user_id]
+    
+    print(f"📊 Аукцион #{order_id}: всего участников {len(participants)}, проигравших {len(losers)}, winner_user_id={winner_user_id}")
     
     message_text = (
-        f"Аукцион завершен\n\n"
-        f"Заявка #{order_id}\n"
-        f"Груз: {cargo_description}\n\n"
-        f"К сожалению, ваше предложение не было выбрано.\n"
-        f"Следите за новыми заявками!"
+        f"⏰ Аукцион завершен\n\n"
+        f"📦 Заявка #{order_id}\n"
+        f"📝 Груз: {cargo_description}\n\n"
+        f"😔 К сожалению, ваше предложение не было выбрано.\n"
+        f"👀 Следите за новыми заявками!"
     )
     
     sent_count = 0
@@ -138,10 +140,11 @@ async def notify_auction_losers(bot: Bot, order_id: int, winner_user_id: int, ca
                 text=message_text
             )
             sent_count += 1
+            print(f"✅ Уведомление проигравшему: user_id={loser['user_id']}, telegram_id={loser['telegram_id']}")
         except Exception as e:
-            print(f"Не удалось отправить уведомление проигравшему {loser['user_id']}: {str(e)}")
+            print(f"❌ Не удалось отправить уведомление проигравшему {loser['user_id']}: {str(e)}")
     
-    print(f"Отправлено уведомлений проигравшим для заявки #{order_id}: {sent_count} из {len(losers)}")
+    print(f"📨 Отправлено уведомлений проигравшим для заявки #{order_id}: {sent_count} из {len(losers)}")
     return sent_count
 
 
@@ -200,12 +203,12 @@ async def notify_customer_auction_complete(bot: Bot, order_id: int, customer_use
         return False
     
     message_text = (
-        f"Аукцион завершен!\n\n"
-        f"Заявка #{order_id}\n"
-        f"Груз: {cargo_description}\n"
-        f"Выигрышная цена: {winning_price} руб.\n\n"
-        f"Телефон водителя: {driver_phone}\n\n"
-        f"Свяжитесь с водителем для уточнения деталей перевозки!"
+        f"✅ Аукцион завершен!\n\n"
+        f"📦 Заявка #{order_id}\n"
+        f"📝 Груз: {cargo_description}\n"
+        f"💰 Выигрышная цена: {winning_price} руб.\n\n"
+        f"📞 Телефон водителя: {driver_phone}\n\n"
+        f"👉 Свяжитесь с водителем для уточнения деталей перевозки!"
     )
     
     try:
@@ -213,8 +216,8 @@ async def notify_customer_auction_complete(bot: Bot, order_id: int, customer_use
             chat_id=customer['telegram_id'],
             text=message_text
         )
-        print(f"Отправлено уведомление заказчику о завершении аукциона #{order_id}")
+        print(f"✅ Отправлено уведомление заказчику о завершении аукциона #{order_id}")
         return True
     except Exception as e:
-        print(f"Не удалось отправить уведомление заказчику: {str(e)}")
+        print(f"❌ Не удалось отправить уведомление заказчику: {str(e)}")
         return False

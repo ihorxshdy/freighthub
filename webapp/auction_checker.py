@@ -62,10 +62,10 @@ def check_expired_auctions():
                 WHERE id = ?
             ''', (order['customer_id'],)).fetchone()
             
-            # Обновляем статус заказа - устанавливаем победителя
+            # Обновляем статус заказа - устанавливаем победителя и статус "в процессе"
             cursor.execute('''
                 UPDATE orders
-                SET status = 'completed', 
+                SET status = 'in_progress', 
                     winner_driver_id = ?,
                     winning_price = ?
                 WHERE id = ?
@@ -77,7 +77,8 @@ def check_expired_auctions():
             try:
                 notify_auction_complete(
                     order_id=order_id,
-                    winner_user_id=winner['telegram_id'],
+                    winner_telegram_id=winner['telegram_id'],
+                    winner_user_id=winner['id'],
                     winning_price=winning_bid['price'],
                     cargo_description=order['cargo_description'],
                     delivery_address=order['delivery_address'],

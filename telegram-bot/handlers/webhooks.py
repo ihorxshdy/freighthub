@@ -90,7 +90,8 @@ async def webhook_auction_complete(request):
     Ожидаемые данные:
     {
         "order_id": 123,
-        "winner_user_id": 45,
+        "winner_telegram_id": 45,
+        "winner_user_id": 2,
         "winning_price": 4500.0,
         "cargo_description": "Мебель для переезда",
         "delivery_address": "ул. Ленина, д. 10",
@@ -110,14 +111,14 @@ async def webhook_auction_complete(request):
         await notify_auction_winner(
             bot=bot,
             order_id=data['order_id'],
-            winner_user_id=data['winner_user_id'],
+            winner_telegram_id=data['winner_telegram_id'],
             winning_price=float(data['winning_price']),
             cargo_description=data['cargo_description'],
             delivery_address=data['delivery_address'],
             customer_phone=data['customer_phone']
         )
         
-        # Уведомляем проигравших
+        # Уведомляем проигравших (передаем winner_user_id для фильтрации)
         await notify_auction_losers(
             bot=bot,
             order_id=data['order_id'],
@@ -135,7 +136,7 @@ async def webhook_auction_complete(request):
             driver_phone=data['driver_phone']
         )
         
-        logger.info(f"Webhook: Аукцион #{data['order_id']} завершён, победитель {data['winner_user_id']}")
+        logger.info(f"Webhook: Аукцион #{data['order_id']} завершён, победитель telegram_id={data['winner_telegram_id']}")
         
         return web.json_response({'success': True})
         
