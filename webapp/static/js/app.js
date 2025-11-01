@@ -609,7 +609,9 @@ function renderDriverOrders(orders, container, tabId) {
             <div class="order-meta">
                 <span>🚛 ${getTruckTypeName(order.truck_type)}</span>
                 <span>📅 ${formatDate(order.created_at)}</span>
-                ${order.total_bids ? `<span>💰 ${order.total_bids} предложений</span>` : ''}
+                ${order.delivery_date ? `<span>📦 Доставка: ${order.delivery_date}</span>` : ''}
+                ${order.max_price ? `<span>💰 Желаемая цена: ${formatPrice(order.max_price)}</span>` : ''}
+                ${order.total_bids ? `<span>� ${order.total_bids} предложений</span>` : ''}
             </div>
             
             <div class="order-footer">
@@ -797,10 +799,16 @@ window.viewOrderBids = async function(orderId) {
             bidsList.innerHTML = bids.map((bid, index) => `
                 <div class="bid-card">
                     <div class="bid-header">
-                        <div class="bid-driver">${index + 1}. ${bid.first_name} ${bid.last_name || ''}</div>
+                        <div class="bid-driver">${index + 1}. ${bid.name || 'Водитель'}</div>
                         <div class="bid-price">${formatPrice(bid.price)}</div>
                     </div>
-                    <div class="bid-time">📅 ${formatDate(bid.created_at)}</div>
+                    <div class="bid-meta">
+                        <span>📞 ${bid.phone_number}</span>
+                        <span>📅 ${formatDate(bid.created_at)}</span>
+                    </div>
+                    <button class="btn btn-primary" onclick="selectWinner(${orderId}, ${bid.id})" style="width: 100%; margin-top: 10px;">
+                        Выбрать исполнителем
+                    </button>
                 </div>
             `).join('');
         }
@@ -808,6 +816,29 @@ window.viewOrderBids = async function(orderId) {
         modal.classList.remove('hidden');
     } catch (error) {
         showError('Ошибка загрузки предложений');
+    }
+};
+
+window.selectWinner = async function(orderId, bidId) {
+    try {
+        const response = await fetchWithTimeout(`${API_BASE}api/orders/${orderId}/select-winner`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                telegram_id: currentUser.telegram_id,
+                bid_id: bidId
+            })
+        }, 15000);
+        
+        if (!response.ok) {
+            throw new Error('Ошибка выбора исполнителя');
+        }
+        
+        document.getElementById('view-bids-modal').classList.add('hidden');
+        showSuccess('Исполнитель выбран! Заявка перемещена в "В процессе"');
+        refreshOrders();
+    } catch (error) {
+        showError('Ошибка выбора исполнителя');
     }
 };
 
