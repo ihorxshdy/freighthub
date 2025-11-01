@@ -756,12 +756,12 @@ def select_auction_winner(order_id):
             order_id=order_id,
             winner_telegram_id=bid['driver_telegram_id'],
             winner_user_id=bid['driver_id'],
-            winner_username=bid.get('driver_username'),
+            winner_username=bid['driver_username'] if bid['driver_username'] else None,
             winning_price=bid['price'],
             cargo_description=order['cargo_description'],
             delivery_address=order['delivery_address'],
             customer_user_id=telegram_id,
-            customer_username=customer.get('username') if customer else None,
+            customer_username=customer['username'] if customer and customer['username'] else None,
             customer_phone=customer['phone_number'] if customer else '',
             driver_phone=bid['driver_phone']
         )
