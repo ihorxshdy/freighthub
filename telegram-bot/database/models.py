@@ -30,7 +30,7 @@ async def init_database():
                 truck_type TEXT NOT NULL,
                 cargo_description TEXT NOT NULL,
                 delivery_address TEXT NOT NULL,
-                status TEXT DEFAULT 'active' CHECK (status IN ('active', 'completed', 'cancelled', 'no_offers')),
+                status TEXT DEFAULT 'active' CHECK (status IN ('active', 'in_progress', 'completed', 'cancelled', 'closed', 'no_offers')),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 expires_at TIMESTAMP NOT NULL,
                 winner_driver_id INTEGER,
@@ -38,8 +38,15 @@ async def init_database():
                 pickup_address TEXT,
                 pickup_time TEXT,
                 delivery_time TEXT,
+                max_price REAL,
+                delivery_date TEXT,
+                customer_confirmed BOOLEAN DEFAULT FALSE,
+                driver_confirmed BOOLEAN DEFAULT FALSE,
+                cancelled_by INTEGER,
+                cancelled_at TIMESTAMP,
                 FOREIGN KEY (customer_id) REFERENCES users (id),
-                FOREIGN KEY (winner_driver_id) REFERENCES users (id)
+                FOREIGN KEY (winner_driver_id) REFERENCES users (id),
+                FOREIGN KEY (cancelled_by) REFERENCES users (id)
             )
         """)
         
