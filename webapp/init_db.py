@@ -103,7 +103,7 @@ def init_database():
     
     conn.commit()
     conn.close()
-    print(f"✅ База данных создана: {DATABASE_PATH}")
+    print(f"База данных создана: {DATABASE_PATH}")
 
 if __name__ == '__main__':
     init_database()
