@@ -38,7 +38,7 @@ def init_database():
             truck_type TEXT NOT NULL,
             cargo_description TEXT NOT NULL,
             delivery_address TEXT NOT NULL,
-            status TEXT DEFAULT 'active' CHECK (status IN ('active', 'in_progress', 'completed', 'cancelled', 'closed', 'no_offers')),
+            status TEXT DEFAULT 'active' CHECK (status IN ('active', 'auction_completed', 'in_progress', 'completed', 'cancelled', 'closed', 'no_offers')),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             expires_at TIMESTAMP NOT NULL,
             winner_driver_id INTEGER,
