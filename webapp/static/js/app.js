@@ -522,6 +522,86 @@ function updateBadges(orders) {
     });
 }
 
+// Инициализация слайдеров для подтверждения выполнения заказа
+function initSlideToConfirm() {
+    const sliders = document.querySelectorAll('.slide-to-confirm');
+    
+    sliders.forEach(slider => {
+        const button = slider.querySelector('.slide-button');
+        const track = slider.querySelector('.slide-track');
+        const orderId = slider.dataset.orderId;
+        
+        let isDragging = false;
+        let startX = 0;
+        let currentX = 0;
+        const trackWidth = track.offsetWidth;
+        const buttonWidth = button.offsetWidth;
+        const maxDrag = trackWidth - buttonWidth;
+        
+        // Обработчик начала касания/клика
+        const handleStart = (e) => {
+            isDragging = true;
+            startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+            button.style.transition = 'none';
+            slider.classList.add('dragging');
+        };
+        
+        // Обработчик движения
+        const handleMove = (e) => {
+            if (!isDragging) return;
+            
+            e.preventDefault();
+            const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+            currentX = clientX - startX;
+            
+            // Ограничиваем движение
+            if (currentX < 0) currentX = 0;
+            if (currentX > maxDrag) currentX = maxDrag;
+            
+            button.style.transform = `translateX(${currentX}px)`;
+            
+            // Меняем прозрачность текста
+            const progress = currentX / maxDrag;
+            track.querySelector('.slide-text').style.opacity = 1 - progress;
+        };
+        
+        // Обработчик окончания касания/клика
+        const handleEnd = async () => {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            button.style.transition = 'transform 0.3s ease';
+            slider.classList.remove('dragging');
+            
+            // Проверяем, дотянули ли до конца (90% от максимума)
+            if (currentX > maxDrag * 0.9) {
+                // Успешное подтверждение
+                slider.classList.add('confirmed');
+                button.style.transform = `translateX(${maxDrag}px)`;
+                
+                // Вызываем функцию подтверждения заказа
+                await confirmOrderCompletion(orderId);
+            } else {
+                // Возвращаем кнопку обратно
+                button.style.transform = 'translateX(0)';
+                track.querySelector('.slide-text').style.opacity = '1';
+            }
+            
+            currentX = 0;
+        };
+        
+        // Добавляем обработчики событий
+        button.addEventListener('mousedown', handleStart);
+        button.addEventListener('touchstart', handleStart, { passive: false });
+        
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('touchmove', handleMove, { passive: false });
+        
+        document.addEventListener('mouseup', handleEnd);
+        document.addEventListener('touchend', handleEnd);
+    });
+}
+
 function renderCustomerOrders(orders, container, tabId) {
     if (!orders || orders.length === 0) {
         container.innerHTML = `
@@ -590,17 +670,27 @@ function renderCustomerOrders(orders, container, tabId) {
                 </div>
             ` : ''}
             ${tabId === 'in_progress' && order.status === 'in_progress' ? `
-                <div style="display: flex; gap: 10px; margin-top: 10px;">
-                    <button class="btn btn-small btn-success" onclick="confirmOrderCompletion(${order.id})" style="flex: 1;">
-                        Подтвердить выполнение
-                    </button>
-                    <button class="btn btn-small btn-danger" onclick="cancelOrder(${order.id})" style="flex: 1;">
+                <div style="margin-top: 10px;">
+                    <div class="slide-to-confirm" id="slide-confirm-${order.id}" data-order-id="${order.id}">
+                        <div class="slide-track">
+                            <span class="slide-text">Проведите для подтверждения</span>
+                        </div>
+                        <div class="slide-button">
+                            <span class="slide-icon">→</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <button class="btn btn-small btn-danger" onclick="cancelOrder(${order.id})" style="width: 100%;">
                         Отменить заказ
                     </button>
                 </div>
             ` : ''}
         </div>
     `).join('');
+    
+    // Инициализируем слайдеры для подтверждения
+    initSlideToConfirm();
 }
 
 function renderDriverOrders(orders, container, tabId) {
@@ -659,18 +749,23 @@ function renderDriverOrders(orders, container, tabId) {
                     </button>
                 ` : ''}
                 ${tabId === 'in_progress' ? `
-                    <div style="display: flex; gap: 10px; margin-top: 10px;">
-                        <button class="btn btn-small btn-success" onclick="confirmOrderCompletion(${order.id})" style="flex: 1;">
-                            Подтвердить выполнение
-                        </button>
-                        <button class="btn btn-small btn-danger" onclick="cancelOrder(${order.id})" style="flex: 1;">
-                            Отменить заказ
-                        </button>
+                    <div style="margin-top: 10px;">
+                        <div class="slide-to-confirm" id="slide-confirm-driver-${order.id}" data-order-id="${order.id}">
+                            <div class="slide-track">
+                                <span class="slide-text">Проведите для подтверждения</span>
+                            </div>
+                            <div class="slide-button">
+                                <span class="slide-icon">→</span>
+                            </div>
+                        </div>
                     </div>
                 ` : ''}
             </div>
         </div>
     `).join('');
+    
+    // Инициализируем слайдеры для подтверждения
+    initSlideToConfirm();
 }
 
 // === МОДАЛЬНЫЕ ОКНА ===

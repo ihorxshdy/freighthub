@@ -663,6 +663,81 @@ body.role-customer .fab {
     color: var(--tg-theme-hint-color);
 }
 
+/* === SLIDE TO CONFIRM === */
+.slide-to-confirm {
+    position: relative;
+    width: 100%;
+    height: 50px;
+    background: linear-gradient(90deg, #e0e0e0 0%, #4CAF50 100%);
+    border-radius: 25px;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+.slide-track {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.slide-text {
+    color: #666;
+    font-weight: 600;
+    font-size: 14px;
+    transition: opacity 0.3s ease;
+}
+
+.slide-button {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 50px;
+    height: 50px;
+    background: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease;
+    z-index: 10;
+}
+
+.slide-button:active {
+    cursor: grabbing;
+}
+
+.slide-icon {
+    font-size: 24px;
+    font-weight: bold;
+    color: #4CAF50;
+}
+
+.slide-to-confirm.dragging .slide-button {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.slide-to-confirm.confirmed {
+    background: #4CAF50;
+}
+
+.slide-to-confirm.confirmed .slide-text {
+    color: #ffffff;
+}
+
+.slide-to-confirm.confirmed .slide-icon {
+    content: '✓';
+}
+
 /* === RESPONSIVE === */
 @media (min-width: 768px) {
     .modal-content {
