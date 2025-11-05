@@ -90,3 +90,14 @@ def notify_order_cancelled(order_id, cancelled_by_telegram_id, cancelled_by_role
         'driver_telegram_id': driver_telegram_id,
         'cargo_description': cargo_description
     })
+
+
+def notify_auction_bids_ready(order_id, customer_user_id, cargo_description, bids_count, min_price):
+    """Уведомить заказчика о готовности предложений для выбора"""
+    return send_webhook('/webhook/auction-bids-ready', {
+        'order_id': order_id,
+        'customer_user_id': customer_user_id,
+        'cargo_description': cargo_description,
+        'bids_count': bids_count,
+        'min_price': min_price
+    })

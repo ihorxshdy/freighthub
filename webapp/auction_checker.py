@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 def check_expired_auctions():
     """
     Проверяет и завершает истекшие подборы
-    Должна запускаться периодически (каждую минуту)
+    НОВАЯ ЛОГИКА: После истечения времени заявка НЕ закрывается автоматически,
+    а переходит в статус "auction_completed" для ручного выбора заказчиком
     """
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
@@ -45,50 +46,34 @@ def check_expired_auctions():
         ''', (order_id,)).fetchall()
         
         if bids:
-            # Есть ставки - выбираем победителя (минимальная цена)
-            winning_bid = bids[0]
-            
-            # Получаем данные победителя
-            winner = cursor.execute('''
-                SELECT id, telegram_id, name, phone_number, username
-                FROM users
+            # Есть ставки - переводим в статус "auction_completed" 
+            # Заказчик сможет посмотреть предложения и выбрать исполнителя
+            cursor.execute('''
+                UPDATE orders
+                SET status = 'auction_completed'
                 WHERE id = ?
-            ''', (winning_bid['driver_id'],)).fetchone()
+            ''', (order_id,))
             
-            # Получаем данные заказчика
+            conn.commit()
+            
+            # Получаем данные заказчика для уведомления
             customer = cursor.execute('''
-                SELECT id, telegram_id, phone_number, username
+                SELECT telegram_id
                 FROM users
                 WHERE id = ?
             ''', (order['customer_id'],)).fetchone()
             
-            # Обновляем статус заказа - устанавливаем победителя и статус "в процессе"
-            cursor.execute('''
-                UPDATE orders
-                SET status = 'in_progress', 
-                    winner_driver_id = ?,
-                    winning_price = ?
-                WHERE id = ?
-            ''', (winning_bid['driver_id'], winning_bid['price'], order_id))
-            
-            conn.commit()
-            
-            # Отправляем webhook уведомление
+            # Отправляем webhook уведомление заказчику о завершении сбора предложений
             try:
-                notify_auction_complete(
+                from webhook_client import notify_auction_bids_ready
+                notify_auction_bids_ready(
                     order_id=order_id,
-                    winner_telegram_id=winner['telegram_id'],
-                    winner_user_id=winner['id'],
-                    winner_username=winner['username'],
-                    winning_price=winning_bid['price'],
-                    cargo_description=order['cargo_description'],
-                    delivery_address=order['delivery_address'],
                     customer_user_id=customer['telegram_id'],
-                    customer_username=customer['username'],
-                    customer_phone=customer['phone_number'],
-                    driver_phone=winner['phone_number']
+                    cargo_description=order['cargo_description'],
+                    bids_count=len(bids),
+                    min_price=bids[0]['price'] if bids else 0
                 )
-                logger.info(f"✅ Подбор завершен: заказ {order_id}, победитель {winner['name']}, цена {winning_bid['price']}")
+                logger.info(f"✅ Подбор завершен для ручного выбора: заказ {order_id}, предложений: {len(bids)}")
             except Exception as e:
                 logger.error(f"❌ Ошибка отправки webhook для заказа {order_id}: {e}")
         

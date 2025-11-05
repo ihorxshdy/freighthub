@@ -405,6 +405,7 @@ function initTabs() {
         tabs = [
             { id: 'searching', label: 'Поиск исполнителей', icon: '' },
             { id: 'created', label: 'Созданные', icon: '' },
+            { id: 'auction_completed', label: 'Выбор исполнителя', icon: '' },
             { id: 'in_progress', label: 'В процессе', icon: '' },
             { id: 'closed', label: 'Закрытые', icon: '' }
         ];
@@ -575,6 +576,17 @@ function renderCustomerOrders(orders, container, tabId) {
                     </div>
                     <button class="btn btn-small btn-primary" onclick="viewOrderBids(${order.id})">
                         Смотреть
+                    </button>
+                </div>
+            ` : ''}
+            ${tabId === 'auction_completed' ? `
+                <div class="order-footer">
+                    <div class="bids-info">
+                        Получено предложений: <span class="bids-count">${order.bids_count || 0}</span>
+                        ${order.min_bid_price ? `<br>Минимальная цена: <span class="min-price">${formatPrice(order.min_bid_price)}</span>` : ''}
+                    </div>
+                    <button class="btn btn-small btn-success" onclick="viewAndSelectBids(${order.id})">
+                        Выбрать исполнителя
                     </button>
                 </div>
             ` : ''}
@@ -919,6 +931,50 @@ window.selectWinner = async function(orderId, bidId) {
     }
 };
 
+window.viewAndSelectBids = async function(orderId) {
+    try {
+        const bids = await fetchOrderBids(orderId);
+        const modal = document.getElementById('view-bids-modal');
+        const bidsList = document.getElementById('bids-list');
+        
+        if (bids.length === 0) {
+            bidsList.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">💰</div>
+                    <div class="empty-title">Нет предложений</div>
+                    <div class="empty-description">Предложения от водителей не поступили</div>
+                </div>
+            `;
+        } else {
+            bidsList.innerHTML = bids.map((bid, index) => `
+                <div class="bid-card">
+                    <div class="bid-header">
+                        <div class="bid-driver">${index + 1}. ${bid.name || 'Водитель'}</div>
+                        <div class="bid-price">${formatPrice(bid.price)}</div>
+                    </div>
+                    <div class="bid-contact">
+                        📞 ${bid.phone_number || 'Телефон не указан'}
+                    </div>
+                    <div class="bid-meta">
+                        <span>📅 ${formatDate(bid.created_at)}</span>
+                    </div>
+                    <button class="btn btn-success" onclick="selectWinner(${orderId}, ${bid.id})" style="width: 100%; margin-top: 10px;">
+                        ✅ Выбрать исполнителем
+                    </button>
+                </div>
+            `).join('');
+        }
+        
+        // Обновляем заголовок модального окна
+        const modalHeader = modal.querySelector('.modal-header h2');
+        modalHeader.textContent = `Выбор исполнителя (${bids.length} предложений)`;
+        
+        modal.classList.remove('hidden');
+    } catch (error) {
+        showError('Ошибка загрузки предложений');
+    }
+};
+
 window.confirmOrderCompletion = async function(orderId) {
     try {
         const response = await fetchWithTimeout(`${API_BASE}api/orders/${orderId}/confirm-completion`, {
@@ -958,6 +1014,7 @@ function getStatusLabel(status) {
         'searching': 'Поиск',
         'created': 'Создана',
         'completed': 'Завершена',
+        'auction_completed': 'Прием заявок завершен',
         'open': 'Открыта',
         'my_bids': 'Предложено',
         'in_progress': 'В процессе',

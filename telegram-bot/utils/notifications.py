@@ -322,3 +322,43 @@ async def notify_order_cancelled(bot: Bot, telegram_id: int, order_id: int, canc
     except Exception as e:
         print(f"Не удалось отправить уведомление об отмене: {str(e)}")
         return False
+
+
+async def notify_customer_bids_ready(bot: Bot, order_id: int, customer_user_id: int, cargo_description: str, bids_count: int, min_price: float):
+    """
+    Уведомляет заказчика о готовности предложений для выбора исполнителя
+    
+    Args:
+        bot: Экземпляр бота
+        order_id: ID заявки
+        customer_user_id: telegram_id заказчика
+        cargo_description: Описание груза
+        bids_count: Количество предложений
+        min_price: Минимальная цена среди предложений
+    """
+    customer = await get_user_by_telegram_id(customer_user_id)
+    
+    if not customer:
+        print(f"Не найден заказчик с telegram_id {customer_user_id}")
+        return False
+    
+    message_text = (
+        f"🎉 Прием заявок завершен!\n\n"
+        f"Заявка #{order_id}\n"
+        f"Груз: {cargo_description}\n\n"
+        f"📊 Получено предложений: {bids_count}\n"
+        f"💰 Минимальная цена: {min_price} руб.\n\n"
+        f"📱 Откройте приложение для выбора исполнителя!\n"
+        f"Вы можете посмотреть все предложения с контактами водителей."
+    )
+    
+    try:
+        await bot.send_message(
+            chat_id=customer['telegram_id'],
+            text=message_text
+        )
+        print(f"Отправлено уведомление заказчику о готовности предложений для заявки #{order_id}")
+        return True
+    except Exception as e:
+        print(f"Не удалось отправить уведомление заказчику о предложениях: {str(e)}")
+        return False

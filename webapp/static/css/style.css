@@ -651,7 +651,14 @@ body.role-customer .fab {
     color: var(--tg-theme-button-color);
 }
 
-.bid-time {
+.bid-contact {
+    font-size: 14px;
+    color: var(--tg-theme-text-color);
+    margin-bottom: 8px;
+    padding: 4px 0;
+}
+
+.bid-meta {
     font-size: 12px;
     color: var(--tg-theme-hint-color);
 }

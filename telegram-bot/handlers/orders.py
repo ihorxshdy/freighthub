@@ -544,7 +544,7 @@ async def bid_price_received(message: Message, state: FSMContext, bot: Bot):
     await state.clear()
 
 async def auction_timer(bot: Bot, order_id: int):
-    """Таймер подбора"""
+    """Таймер подбора - НОВАЯ ЛОГИКА"""
     # Ждем окончания подбора
     await asyncio.sleep(AUCTION_DURATION)
     
@@ -556,7 +556,7 @@ async def auction_timer(bot: Bot, order_id: int):
         return
     
     if not bids:
-        # Нет предложений
+        # Нет предложений - закрываем заявку
         await complete_order(order_id, None, None, 'no_offers')
         
         # Получаем информацию о сообщении заявки
@@ -593,21 +593,245 @@ async def auction_timer(bot: Bot, order_id: int):
                                 pass
             
     else:
-        # Есть предложения, выбираем минимальную цену
-        winning_bid = bids[0]  # Уже отсортировано по цене
+        # Есть предложения - переводим заявку в статус "auction_completed" 
+        # для ручного выбора заказчиком
         
-        await complete_order(
-            order_id, 
-            winning_bid['driver_id'], 
-            winning_bid['price'], 
-            'completed'
+        # Обновляем статус заявки в базе
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute("UPDATE orders SET status = ? WHERE id = ?", ('auction_completed', order_id))
+            await db.commit()
+        
+        # Получаем информацию о сообщении заявки
+        order_message_info = await get_order_message(order_id, 'customer')
+        
+        # Показываем только 5 лучших предложений (по цене)
+        top_bids = bids[:5]
+        
+        # Обновляем сообщение заказчика с предложениями
+        if order_message_info:
+            try:
+                truck_name = get_truck_display_name(order['truck_type'])
+                
+                bids_text = ""
+                for i, bid in enumerate(top_bids, 1):
+                    bids_text += f"{i}. {bid['price']} руб. - {bid['driver_name'] or 'Водитель'}\n"
+                
+                # Создаем кнопку для просмотра всех предложений
+                show_bids_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="📋 Посмотреть все предложения", 
+                                        callback_data=f"show_all_bids_{order_id}")]
+                ])
+                
+                await bot.edit_message_text(
+                    chat_id=order_message_info['chat_id'],
+                    message_id=order_message_info['message_id'],
+                    text=f"✅ Заявка #{order_id} - Прием заявок завершен\n\n"
+                         f"🚚 Тип машины: {truck_name}\n"
+                         f"📦 Описание: {order['cargo_description']}\n\n"
+                         f"📊 Получено предложений: {len(bids)}\n"
+                         f"💰 Топ-5 предложений:\n{bids_text}\n"
+                         f"🔄 Статус: Ожидает выбора исполнителя",
+                    reply_markup=show_bids_keyboard
+                )
+            except Exception as e:
+                logging.error(f"Ошибка при обновлении сообщения заявки: {e}")
+        
+        # НЕ уведомляем водителей о результатах - они узнают только при выборе заказчиком
+
+@router.callback_query(F.data.startswith("show_all_bids_"))
+async def show_all_bids(callback: CallbackQuery, bot: Bot):
+    """Показать все предложения для выбора исполнителя"""
+    order_id = int(callback.data.split("_")[3])
+    
+    user = await get_user_by_telegram_id(callback.from_user.id)
+    
+    if not user or user['role'] != 'customer':
+        await callback.answer("❌ Только заказчик может просматривать предложения!")
+        return
+    
+    # Проверяем, что заказ принадлежит этому заказчику
+    order = await get_order_by_id(order_id)
+    if not order or order['customer_id'] != user['id']:
+        await callback.answer("❌ Заказ не найден или вы не являетесь его заказчиком!")
+        return
+        
+    if order['status'] != 'auction_completed':
+        await callback.answer("❌ Этот заказ еще не готов для выбора исполнителя!")
+        return
+    
+    # Получаем все предложения
+    bids = await get_bids_for_order(order_id)
+    
+    if not bids:
+        await callback.answer("❌ Нет предложений для этого заказа!")
+        return
+    
+    truck_name = get_truck_display_name(order['truck_type'])
+    
+    # Формируем текст со всеми предложениями
+    bids_text = ""
+    buttons = []
+    
+    for i, bid in enumerate(bids, 1):
+        bids_text += f"{i}. {bid['price']} руб. - {bid['driver_name'] or 'Водитель'}\n"
+        bids_text += f"   📞 {bid['driver_phone'] or 'Нет телефона'}\n\n"
+        
+        # Кнопка для выбора этого водителя
+        buttons.append([InlineKeyboardButton(
+            text=f"✅ Выбрать {bid['driver_name'] or 'Водителя'} ({bid['price']} руб.)",
+            callback_data=f"select_driver_{order_id}_{bid['id']}"
+        )])
+    
+    # Кнопка назад
+    buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data=f"back_to_order_{order_id}")])
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    
+    try:
+        await bot.edit_message_text(
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=f"📋 Все предложения по заявке #{order_id}\n\n"
+                 f"🚚 Тип машины: {truck_name}\n"
+                 f"📦 Описание: {order['cargo_description']}\n\n"
+                 f"👥 Предложения водителей ({len(bids)} шт.):\n\n{bids_text}"
+                 f"👆 Выберите исполнителя:",
+            reply_markup=keyboard
         )
+    except Exception as e:
+        logging.error(f"Ошибка при показе предложений: {e}")
+        await callback.answer("❌ Ошибка при загрузке предложений")
+
+@router.callback_query(F.data.startswith("select_driver_"))
+async def select_driver(callback: CallbackQuery, bot: Bot):
+    """Выбор конкретного водителя заказчиком"""
+    parts = callback.data.split("_")
+    order_id = int(parts[2])
+    bid_id = int(parts[3])
+    
+    user = await get_user_by_telegram_id(callback.from_user.id)
+    
+    if not user or user['role'] != 'customer':
+        await callback.answer("❌ Только заказчик может выбирать исполнителя!")
+        return
+    
+    # Проверяем заказ и предложение
+    order = await get_order_by_id(order_id)
+    if not order or order['customer_id'] != user['id']:
+        await callback.answer("❌ Заказ не найден!")
+        return
         
-        # Уведомляем заказчика о результатах (функция сама обновит сообщение)
-        await notify_customer_about_winner(bot, order, winning_bid)
-        
-        # Уведомляем водителей
-        await notify_drivers_about_results(bot, order_id, bids, winning_bid)
+    if order['status'] != 'auction_completed':
+        await callback.answer("❌ Этот заказ еще не готов для выбора исполнителя!")
+        return
+    
+    # Получаем выбранное предложение
+    bids = await get_bids_for_order(order_id)
+    selected_bid = None
+    
+    for bid in bids:
+        if bid['id'] == bid_id:
+            selected_bid = bid
+            break
+    
+    if not selected_bid:
+        await callback.answer("❌ Предложение не найдено!")
+        return
+    
+    # Обновляем заказ - устанавливаем выбранного водителя
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            UPDATE orders 
+            SET status = 'in_progress', 
+                winner_driver_id = ?,
+                winning_price = ?
+            WHERE id = ?
+        """, (selected_bid['driver_id'], selected_bid['price'], order_id))
+        await db.commit()
+    
+    # Уведомляем выбранного водителя
+    truck_name = get_truck_display_name(order['truck_type'])
+    
+    try:
+        await bot.send_message(
+            chat_id=selected_bid['driver_telegram_id'],
+            text=f"🎉 Вы выбраны исполнителем!\n\n"
+                 f"📋 Заявка #{order_id}\n"
+                 f"🚚 Тип машины: {truck_name}\n"
+                 f"📦 Описание: {order['cargo_description']}\n"
+                 f"💰 Цена: {selected_bid['price']} руб.\n\n"
+                 f"👤 Заказчик: {user['name'] or 'Не указано'}\n"
+                 f"📞 Телефон заказчика: {user['phone_number']}\n\n"
+                 f"✅ Свяжитесь с заказчиком для уточнения деталей!"
+        )
+    except Exception as e:
+        logging.error(f"Ошибка отправки уведомления водителю: {e}")
+    
+    # Обновляем сообщение заказчика
+    try:
+        await bot.edit_message_text(
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=f"✅ Исполнитель выбран!\n\n"
+                 f"📋 Заявка #{order_id}\n"
+                 f"🚚 Тип машины: {truck_name}\n"
+                 f"📦 Описание: {order['cargo_description']}\n\n"
+                 f"🏆 Выбранный водитель: {selected_bid['driver_name']}\n"
+                 f"💰 Цена: {selected_bid['price']} руб.\n"
+                 f"📞 Телефон водителя: {selected_bid['driver_phone']}\n\n"
+                 f"🔄 Статус: Исполнитель выбран\n"
+                 f"✅ Водитель уведомлен о выборе!"
+        )
+    except Exception as e:
+        logging.error(f"Ошибка обновления сообщения заказчика: {e}")
+    
+    await callback.answer("✅ Исполнитель выбран и уведомлен!")
+
+@router.callback_query(F.data.startswith("back_to_order_"))
+async def back_to_order(callback: CallbackQuery, bot: Bot):
+    """Возврат к краткому просмотру заказа"""
+    order_id = int(callback.data.split("_")[3])
+    
+    user = await get_user_by_telegram_id(callback.from_user.id)
+    
+    if not user or user['role'] != 'customer':
+        await callback.answer("❌ Доступ запрещен!")
+        return
+    
+    order = await get_order_by_id(order_id)
+    if not order or order['customer_id'] != user['id']:
+        await callback.answer("❌ Заказ не найден!")
+        return
+    
+    bids = await get_bids_for_order(order_id)
+    top_bids = bids[:5] if bids else []
+    
+    truck_name = get_truck_display_name(order['truck_type'])
+    
+    bids_text = ""
+    for i, bid in enumerate(top_bids, 1):
+        bids_text += f"{i}. {bid['price']} руб. - {bid['driver_name'] or 'Водитель'}\n"
+    
+    show_bids_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📋 Посмотреть все предложения", 
+                            callback_data=f"show_all_bids_{order_id}")]
+    ])
+    
+    try:
+        await bot.edit_message_text(
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=f"✅ Заявка #{order_id} - Прием заявок завершен\n\n"
+                 f"🚚 Тип машины: {truck_name}\n"
+                 f"📦 Описание: {order['cargo_description']}\n\n"
+                 f"📊 Получено предложений: {len(bids)}\n"
+                 f"💰 Топ-5 предложений:\n{bids_text}\n"
+                 f"🔄 Статус: Ожидает выбора исполнителя",
+            reply_markup=show_bids_keyboard
+        )
+    except Exception as e:
+        logging.error(f"Ошибка возврата к заказу: {e}")
+        await callback.answer("❌ Ошибка")
 
 async def notify_customer_about_winner(bot: Bot, order: dict, winning_bid: dict):
     """Уведомление заказчика о результатах подбора"""

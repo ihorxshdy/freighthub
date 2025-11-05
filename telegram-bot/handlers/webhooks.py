@@ -12,6 +12,7 @@ from utils.notifications import (
     notify_auction_losers,
     notify_customer_no_bids,
     notify_customer_auction_complete,
+    notify_customer_bids_ready,
     notify_order_confirmed,
     notify_order_cancelled
 )
@@ -185,6 +186,45 @@ async def webhook_auction_no_bids(request):
         return web.json_response({'error': str(e)}, status=500)
 
 
+async def webhook_auction_bids_ready(request):
+    """
+    Webhook: предложения готовы для выбора заказчиком
+    
+    Ожидаемые данные:
+    {
+        "order_id": 123,
+        "customer_user_id": 12,
+        "cargo_description": "Мебель для переезда",
+        "bids_count": 5,
+        "min_price": 4000.0
+    }
+    """
+    if not await verify_webhook_token(request):
+        return web.json_response({'error': 'Unauthorized'}, status=401)
+    
+    try:
+        data = await request.json()
+        bot = request.app['bot']
+        
+        # Уведомляем заказчика о готовности предложений для выбора
+        await notify_customer_bids_ready(
+            bot=bot,
+            order_id=data['order_id'],
+            customer_user_id=data['customer_user_id'],
+            cargo_description=data['cargo_description'],
+            bids_count=data['bids_count'],
+            min_price=float(data['min_price'])
+        )
+        
+        logger.info(f"Webhook: Заказчику уведомление о готовности {data['bids_count']} предложений для заказа #{data['order_id']}")
+        
+        return web.json_response({'success': True})
+        
+    except Exception as e:
+        logger.error(f"Ошибка обработки webhook auction_bids_ready: {e}")
+        return web.json_response({'error': str(e)}, status=500)
+
+
 async def webhook_order_confirmed(request):
     """
     Webhook: одна из сторон подтвердила выполнение заказа
@@ -309,6 +349,7 @@ def setup_webhook_handlers(app, bot: Bot):
     app.router.add_post('/webhook/new-order', webhook_new_order)
     app.router.add_post('/webhook/auction-complete', webhook_auction_complete)
     app.router.add_post('/webhook/auction-no-bids', webhook_auction_no_bids)
+    app.router.add_post('/webhook/auction-bids-ready', webhook_auction_bids_ready)
     app.router.add_post('/webhook/order-confirmed', webhook_order_confirmed)
     app.router.add_post('/webhook/order-cancelled', webhook_order_cancelled)
     app.router.add_get('/webhook/health', webhook_health)

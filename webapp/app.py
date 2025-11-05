@@ -197,10 +197,11 @@ def get_customer_orders():
     
     # Группируем по статусам
     result = {
-        'searching': [],    # Идет поиск исполнителей (active + есть предложения)
-        'created': [],      # Созданные заявки (active + нет предложений)
-        'in_progress': [],  # В процессе выполнения
-        'closed': []        # Завершенные/отмененные заявки
+        'searching': [],        # Идет поиск исполнителей (active + есть предложения)
+        'created': [],          # Созданные заявки (active + нет предложений)
+        'auction_completed': [], # Прием заявок завершен - можно выбрать исполнителя
+        'in_progress': [],      # В процессе выполнения
+        'closed': []            # Завершенные/отмененные заявки
     }
     
     for order in orders:
@@ -211,6 +212,8 @@ def get_customer_orders():
             result['closed'].append(order_data)
         elif status == 'in_progress':
             result['in_progress'].append(order_data)
+        elif status == 'auction_completed':
+            result['auction_completed'].append(order_data)
         elif status == 'active':
             if order_data['bids_count'] > 0:
                 result['searching'].append(order_data)
@@ -321,11 +324,40 @@ def create_order():
 
 @app.route('/api/orders/<int:order_id>/bids', methods=['GET'])
 def get_order_bids(order_id):
-    """Получение всех предложений по заказу (по схеме БД бота)"""
+    """Получение всех предложений по заказу с контактами водителей"""
+    telegram_id = request.args.get('telegram_id')
+    
+    if not telegram_id:
+        return jsonify({'error': 'telegram_id required'}), 400
+    
     conn = get_db_connection()
     
+    # Проверяем, что пользователь - заказчик этой заявки
+    user = conn.execute(
+        'SELECT id FROM users WHERE telegram_id = ?',
+        (telegram_id,)
+    ).fetchone()
+    
+    if not user:
+        conn.close()
+        return jsonify({'error': 'User not found'}), 404
+    
+    order = conn.execute(
+        'SELECT customer_id, status FROM orders WHERE id = ?',
+        (order_id,)
+    ).fetchone()
+    
+    if not order:
+        conn.close()
+        return jsonify({'error': 'Order not found'}), 404
+        
+    if order['customer_id'] != user['id']:
+        conn.close()
+        return jsonify({'error': 'Access denied'}), 403
+    
+    # Получаем предложения с полной информацией о водителях
     bids = conn.execute(
-        '''SELECT b.*, u.name, u.phone_number
+        '''SELECT b.*, u.name, u.phone_number, u.telegram_id as driver_telegram_id
            FROM bids b
            JOIN users u ON b.driver_id = u.id
            WHERE b.order_id = ?
@@ -334,6 +366,11 @@ def get_order_bids(order_id):
     ).fetchall()
     
     conn.close()
+    
+    # Показываем только ТОП-5 или все (в зависимости от статуса заказа)
+    if order['status'] == 'active' and len(bids) > 5:
+        # Для активных заказов показываем только топ-5
+        bids = bids[:5]
     
     return jsonify([dict_from_row(bid) for bid in bids])
 
