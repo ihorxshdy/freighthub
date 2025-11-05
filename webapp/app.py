@@ -765,8 +765,8 @@ def select_auction_winner(order_id):
         conn.close()
         return jsonify({'error': 'Only order creator can select winner'}), 403
     
-    # Проверяем, что заявка активна
-    if order['status'] != 'active':
+    # Проверяем, что заявка активна или аукцион завершен
+    if order['status'] not in ['active', 'auction_completed']:
         conn.close()
         return jsonify({'error': 'Order is not active'}), 400
     
