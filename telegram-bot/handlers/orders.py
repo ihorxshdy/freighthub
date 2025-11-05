@@ -301,7 +301,7 @@ async def order_details_received(message: Message, state: FSMContext, bot: Bot):
     
     user = await get_user_by_telegram_id(message.from_user.id)
     
-    # Создание времени истечения заявки (10 минут)
+    # Создание времени истечения заявки (2 минуты)
     from datetime import datetime, timedelta
     expires_at = datetime.now() + timedelta(seconds=AUCTION_DURATION)
     

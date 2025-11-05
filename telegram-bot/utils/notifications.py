@@ -45,7 +45,7 @@ async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, car
         f"{delivery_time_text}"
         f"{delivery_date_text}"
         f"{price_text}\n"
-        f"Подбор длится 10 минут!\n"
+        f"Подбор длится 2 минуты!\n"
         f"Откройте приложение для участия"
     )
     
