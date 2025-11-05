@@ -330,7 +330,7 @@ async function createBid(bidData) {
 }
 
 async function fetchOrderBids(orderId) {
-    const response = await fetchWithTimeout(`${API_BASE}api/orders/${orderId}/bids`, {}, 10000);
+    const response = await fetchWithTimeout(`${API_BASE}api/orders/${orderId}/bids?telegram_id=${currentUser.telegram_id}`, {}, 10000);
     return await response.json();
 }
 
