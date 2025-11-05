@@ -402,18 +402,17 @@ function initTabs() {
     
     if (currentUser.role === 'customer') {
         tabs = [
-            { id: 'searching', label: 'Поиск исполнителей', icon: '🔍' },
-            { id: 'created', label: 'Созданные', icon: '📝' },
-            { id: 'in_progress', label: 'В процессе', icon: '🚚' },
-            { id: 'closed', label: 'Закрытые', icon: '✅' }
+            { id: 'searching', label: 'Поиск исполнителей', icon: '' },
+            { id: 'created', label: 'Созданные', icon: '' },
+            { id: 'in_progress', label: 'В процессе', icon: '' },
+            { id: 'closed', label: 'Закрытые', icon: '' }
         ];
     } else {
         tabs = [
-            { id: 'open', label: 'Открытые', icon: '📋' },
-            { id: 'my_bids', label: 'Мои предложения', icon: '💰' },
-            { id: 'won', label: 'Выигранные', icon: '🏆' },
-            { id: 'in_progress', label: 'В процессе', icon: '🚚' },
-            { id: 'closed', label: 'Закрытые', icon: '📁' }
+            { id: 'open', label: 'Открытые заявки', icon: '' },
+            { id: 'my_bids', label: 'Мои предложения', icon: '' },
+            { id: 'in_progress', label: 'В процессе', icon: '' },
+            { id: 'closed', label: 'Закрытые', icon: '' }
         ];
     }
     
@@ -924,7 +923,6 @@ function getStatusLabel(status) {
         'completed': 'Завершена',
         'open': 'Открыта',
         'my_bids': 'Предложено',
-        'won': 'Выиграна',
         'in_progress': 'В процессе',
         'closed': 'Закрыта'
     };
@@ -935,7 +933,6 @@ function getEmptyMessage(tabId) {
     const messages = {
         'open': 'Новые заявки появятся здесь',
         'my_bids': 'Вы еще не делали предложений',
-        'won': 'Вы еще не выиграли ни одной заявки',
         'closed': 'Нет закрытых заявок'
     };
     return messages[tabId] || '';

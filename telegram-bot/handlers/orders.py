@@ -27,7 +27,7 @@ class OrderStates(StatesGroup):
 class BidStates(StatesGroup):
     entering_bid = State()
 
-# Хранилище активных аукционов
+# Хранилище активных подборов
 active_auctions = {}
 
 @router.message(F.text == "📦 Создать заявку")
@@ -391,7 +391,7 @@ async def order_details_received(message: Message, state: FSMContext, bot: Bot):
             message_type='customer'
         )
         
-        # Запускаем таймер аукциона
+        # Запускаем таймер подбора
         import asyncio
         asyncio.create_task(auction_timer(bot, order_id))
         
@@ -515,7 +515,7 @@ async def bid_price_received(message: Message, state: FSMContext, bot: Bot):
                          f"🚚 Тип машины: {truck_name}\n"
                          f"📋 Описание заказа:\n{order['cargo_description']}\n\n"
                          f"💰 Цена: {price} руб.\n"
-                         f"⏰ Результаты будут объявлены в конце аукциона."
+                         f"⏰ Результаты будут объявлены в конце подбора."
                 )
             except Exception as e:
                 logging.error(f"Ошибка при обновлении сообщения с предложением: {e}")
@@ -523,14 +523,14 @@ async def bid_price_received(message: Message, state: FSMContext, bot: Bot):
                 await message.answer(
                     f"✅ Ваше предложение принято!\n\n"
                     f"💰 Цена: {price} руб.\n"
-                    f"⏰ Результаты будут объявлены в конце аукциона."
+                    f"⏰ Результаты будут объявлены в конце подбора."
                 )
         else:
             # Fallback - если нет данных о сообщении
             await message.answer(
                 f"✅ Ваше предложение принято!\n\n"
                 f"💰 Цена: {price} руб.\n"
-                f"⏰ Результаты будут объявлены в конце аукциона."
+                f"⏰ Результаты будут объявлены в конце подбора."
             )
         
     except ValueError:
@@ -544,8 +544,8 @@ async def bid_price_received(message: Message, state: FSMContext, bot: Bot):
     await state.clear()
 
 async def auction_timer(bot: Bot, order_id: int):
-    """Таймер аукциона"""
-    # Ждем окончания аукциона
+    """Таймер подбора"""
+    # Ждем окончания подбора
     await asyncio.sleep(AUCTION_DURATION)
     
     # Получаем все предложения
@@ -572,7 +572,7 @@ async def auction_timer(bot: Bot, order_id: int):
                     text=f"❌ Заявка #{order_id} закрыта\n\n"
                          f"🚚 Тип машины: {truck_name}\n"
                          f"📦 Описание: {order['cargo_description']}\n\n"
-                         f"⏰ Аукцион завершен\n"
+                         f"⏰ Подбор завершен\n"
                          f"🔄 Статус: Нет предложений от водителей\n\n"
                          f"💡 Попробуйте создать новую заявку или изменить условия."
                 )
@@ -610,7 +610,7 @@ async def auction_timer(bot: Bot, order_id: int):
         await notify_drivers_about_results(bot, order_id, bids, winning_bid)
 
 async def notify_customer_about_winner(bot: Bot, order: dict, winning_bid: dict):
-    """Уведомление заказчика о результатах аукциона"""
+    """Уведомление заказчика о результатах подбора"""
     order_id = order['id']
     
     # Получаем информацию о сообщении заказчика
@@ -661,7 +661,7 @@ async def notify_customer_about_winner(bot: Bot, order: dict, winning_bid: dict)
         logging.error(f"Ошибка отправки нового сообщения заказчику: {e}")
 
 async def notify_drivers_about_results(bot: Bot, order_id: int, all_bids: list, winning_bid: dict):
-    """Уведомление водителей о результатах аукциона"""
+    """Уведомление водителей о результатах подбора"""
     # Получаем данные заявки и заказчика
     order = await get_order_by_id(order_id)
     customer_info = None

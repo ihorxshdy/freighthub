@@ -1,5 +1,5 @@
 """
-Фоновые задачи для аукционной системы
+Фоновые задачи для подборной системы
 """
 import asyncio
 from datetime import datetime, timedelta
@@ -16,7 +16,7 @@ from utils.notifications import (
 )
 from database.models import get_user_by_id, get_order_by_id
 
-# Длительность аукциона в секундах (10 минут)
+# Длительность подбора в секундах (10 минут)
 AUCTION_DURATION = 600
 
 # Хранилище для отслеживания заявок, по которым уже отправлены уведомления
@@ -81,11 +81,11 @@ async def check_new_orders(bot: Bot):
 
 
 async def check_expired_auctions(bot: Bot):
-    """Проверка завершенных аукционов и выбор победителя"""
+    """Проверка завершенных подборов и выбор победителя"""
     while True:
         try:
             async with aiosqlite.connect(DB_PATH) as db:
-                # Находим заказы в статусе active, у которых истекло время аукциона
+                # Находим заказы в статусе active, у которых истекло время подбора
                 now = datetime.now()
                 
                 async with db.execute("""
@@ -153,7 +153,7 @@ async def check_expired_auctions(bot: Bot):
                                 driver_phone=winner['phone_number']
                             )
                         
-                        logger.info(f"Аукцион для заказа {order_id} завершен. Победитель: водитель {winner_user_id}, цена: {winning_price}")
+                        logger.info(f"Подбор для заказа {order_id} завершен. Победитель: водитель {winner_user_id}, цена: {winning_price}")
                     else:
                         # Нет ставок - меняем статус на no_offers
                         await db.execute("""
@@ -164,7 +164,7 @@ async def check_expired_auctions(bot: Bot):
                         
                         await db.commit()
                         
-                        logger.info(f"Заказ {order_id} не получил ставок за время аукциона")
+                        logger.info(f"Заказ {order_id} не получил ставок за время подбора")
                         
                         # Уведомляем заказчика об отсутствии предложений
                         await notify_customer_no_bids(
@@ -175,15 +175,15 @@ async def check_expired_auctions(bot: Bot):
                         )
             
         except Exception as e:
-            logger.error(f"Ошибка проверки аукционов: {e}")
+            logger.error(f"Ошибка проверки подборов: {e}")
         
         # Проверяем каждые 30 секунд
         await asyncio.sleep(30)
 
 
 async def start_auction_checker(bot: Bot):
-    """Запуск фоновых задач проверки аукционов и новых заявок"""
-    logger.info("Запуск фоновой задачи проверки аукционов...")
+    """Запуск фоновых задач проверки подборов и новых заявок"""
+    logger.info("Запуск фоновой задачи проверки подборов...")
     asyncio.create_task(check_expired_auctions(bot))
     
     logger.info("Запуск фоновой задачи проверки новых заявок...")

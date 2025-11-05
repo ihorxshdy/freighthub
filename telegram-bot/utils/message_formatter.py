@@ -44,20 +44,20 @@ def format_order_message(order: dict, stage: str = "created", bids_count: int = 
         reply_markup = None
         
     elif stage == "created":
-        # Заявка создана, идет аукцион
+        # Заявка создана, идет подбор
         expires_time = datetime.fromisoformat(order['expires_at'].replace('Z', '+00:00'))
         time_left = expires_time - datetime.now()
         
         if time_left.total_seconds() > 0:
             minutes_left = int(time_left.total_seconds() / 60)
             status_info = (
-                f"\n🔥 **Активный аукцион**\n"
+                f"\n🔥 **Активный подбор**\n"
                 f"⏱️ Осталось времени: {minutes_left} мин.\n"
                 f"💰 Предложений: {bids_count}\n"
                 f"🎯 Ждем предложения от водителей..."
             )
         else:
-            status_info = f"\n⏱️ **Аукцион завершен**\n💰 Получено предложений: {bids_count}"
+            status_info = f"\n⏱️ **Подбор завершен**\n💰 Получено предложений: {bids_count}"
         
         reply_markup = None
         
@@ -79,7 +79,7 @@ def format_order_message(order: dict, stage: str = "created", bids_count: int = 
         
     elif stage == "no_offers":
         status_info = (
-            f"\n🔴 **Аукцион завершен**\n"
+            f"\n🔴 **Подбор завершен**\n"
             f"К сожалению, не поступило ни одного предложения.\n"
             f"Попробуйте создать заявку позже или измените условия."
         )
@@ -142,7 +142,7 @@ def format_driver_notification(order: dict, stage: str = "new_order") -> tuple[s
         
     elif stage == "auction_end":
         message_text = (
-            f"⏱️ **Аукцион завершен**\n\n"
+            f"⏱️ **Подбор завершен**\n\n"
             f"🚚 Заявка #{order['id']} ({truck_name})\n"
             f"📦 {order['cargo_description'][:50]}...\n\n"
             f"Результаты будут объявлены в ближайшее время."
@@ -165,7 +165,7 @@ def format_driver_notification(order: dict, stage: str = "new_order") -> tuple[s
             f"🚚 **Заявка #{order['id']}**\n"
             f"📦 {order['cargo_description'][:50]}...\n"
             f"💰 **Выигрышная цена:** {order.get('winning_price', 'Не указана')} руб.\n\n"
-            f"🚀 Удачи в следующих аукционах!"
+            f"🚀 Удачи в следующих подборах!"
         )
         reply_markup = None
         

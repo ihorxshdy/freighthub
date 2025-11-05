@@ -44,7 +44,7 @@ def notify_new_order(order_id, truck_type, cargo_description, delivery_address, 
 
 def notify_auction_complete(order_id, winner_telegram_id, winner_user_id, winner_username, winning_price, cargo_description, 
                            delivery_address, customer_user_id, customer_username, customer_phone, driver_phone):
-    """Уведомить о завершении аукциона с победителем"""
+    """Уведомить о завершении подбора с победителем"""
     return send_webhook('/webhook/auction-complete', {
         'order_id': order_id,
         'winner_telegram_id': winner_telegram_id,
@@ -61,7 +61,7 @@ def notify_auction_complete(order_id, winner_telegram_id, winner_user_id, winner
 
 
 def notify_auction_no_bids(order_id, customer_user_id, cargo_description):
-    """Уведомить об аукционе без ставок"""
+    """Уведомить об подборе без ставок"""
     return send_webhook('/webhook/auction-no-bids', {
         'order_id': order_id,
         'customer_user_id': customer_user_id,

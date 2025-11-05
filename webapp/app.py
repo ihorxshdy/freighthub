@@ -358,7 +358,7 @@ def get_driver_orders():
     result = {
         'open': [],         # Открытые заявки (можно сделать предложение)
         'my_bids': [],      # Заявки с моими предложениями
-        'won': [],          # Выигранные заявки (пока аукцион активен)
+        'won': [],          # Выигранные заявки (пока подбор активен)
         'in_progress': [],  # В процессе выполнения
         'closed': []        # Закрытые заявки
     }
@@ -380,7 +380,7 @@ def get_driver_orders():
         (user['id'],)
     ).fetchall()
     
-    # Заявки с предложениями от водителя (аукцион еще идет)
+    # Заявки с предложениями от водителя (подбор еще идет)
     my_bids_orders = conn.execute(
         '''SELECT o.*, b.price as my_bid_price, b.id as bid_id,
                   COUNT(DISTINCT b2.id) as total_bids,
@@ -395,7 +395,7 @@ def get_driver_orders():
         (user['id'],)
     ).fetchall()
     
-    # Выигранные заявки (аукцион завершен, этот водитель победитель, но еще не начата работа)
+    # Выигранные заявки (подбор завершен, этот водитель победитель, но еще не начата работа)
     # Оставляем пустым - они сразу переходят в in_progress
     won_orders = []
     
@@ -681,7 +681,7 @@ def cancel_order(order_id):
 
 @app.route('/api/orders/<int:order_id>/select-winner', methods=['POST'])
 def select_auction_winner(order_id):
-    """Ручной выбор исполнителя заказчиком (досрочное завершение аукциона)"""
+    """Ручной выбор исполнителя заказчиком (досрочное завершение подбора)"""
     data = request.json
     telegram_id = data.get('telegram_id')
     bid_id = data.get('bid_id')

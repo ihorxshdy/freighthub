@@ -154,7 +154,7 @@ async def get_all_drivers():
             } for row in rows]
 
 async def get_bid_participants(order_id: int):
-    """Получить всех участников аукциона (кто сделал предложения)"""
+    """Получить всех участников подбора (кто сделал предложения)"""
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute(
             """SELECT DISTINCT u.* 

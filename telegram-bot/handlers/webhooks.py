@@ -88,7 +88,7 @@ async def webhook_new_order(request):
 
 async def webhook_auction_complete(request):
     """
-    Webhook: аукцион завершён с победителем
+    Webhook: подбор завершён с победителем
     
     Ожидаемые данные:
     {
@@ -141,7 +141,7 @@ async def webhook_auction_complete(request):
             driver_username=data.get('winner_username')
         )
         
-        logger.info(f"Webhook: Аукцион #{data['order_id']} завершён, победитель telegram_id={data['winner_telegram_id']}")
+        logger.info(f"Webhook: Подбор #{data['order_id']} завершён, победитель telegram_id={data['winner_telegram_id']}")
         
         return web.json_response({'success': True})
         
@@ -152,7 +152,7 @@ async def webhook_auction_complete(request):
 
 async def webhook_auction_no_bids(request):
     """
-    Webhook: аукцион завершён без ставок
+    Webhook: подбор завершён без ставок
     
     Ожидаемые данные:
     {
@@ -176,7 +176,7 @@ async def webhook_auction_no_bids(request):
             cargo_description=data['cargo_description']
         )
         
-        logger.info(f"Webhook: Аукцион #{data['order_id']} завершён без ставок")
+        logger.info(f"Webhook: Подбор #{data['order_id']} завершён без ставок")
         
         return web.json_response({'success': True})
         

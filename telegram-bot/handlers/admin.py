@@ -81,7 +81,7 @@ async def show_admin_stats(callback: CallbackQuery):
         f"🚚 Водителей: {stats['drivers_count']}\n"
         f"👤 Заказчиков: {stats['customers_count']}\n"
         f"📋 Активных заявок: {stats['active_orders']}\n\n"
-        f"⏰ Время аукциона: 5 минут",
+        f"⏰ Время подбора: 5 минут",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="◀️ Назад", callback_data="admin_back")]
         ])

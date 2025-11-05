@@ -45,7 +45,7 @@ async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, car
         f"{delivery_time_text}"
         f"{delivery_date_text}"
         f"{price_text}\n"
-        f"Аукцион длится 10 минут!\n"
+        f"Подбор длится 10 минут!\n"
         f"Откройте приложение для участия"
     )
     
@@ -67,7 +67,7 @@ async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, car
 
 async def notify_auction_winner(bot: Bot, order_id: int, winner_telegram_id: int, winning_price: float, cargo_description: str, delivery_address: str, customer_phone: str, customer_username: Optional[str] = None):
     """
-    Уведомляет победителя аукциона
+    Уведомляет победителя подбора
     
     Args:
         bot: Экземпляр бота
@@ -92,7 +92,7 @@ async def notify_auction_winner(bot: Bot, order_id: int, winner_telegram_id: int
         contact_info = f"Телефон: {customer_phone}"
     
     message_text = (
-        f"Поздравляем! Вы выиграли аукцион!\n\n"
+        f"Поздравляем! Вы выиграли подбор!\n\n"
         f"Заявка #{order_id}\n"
         f"Груз: {cargo_description}\n"
         f"Адрес доставки: {delivery_address}\n"
@@ -115,7 +115,7 @@ async def notify_auction_winner(bot: Bot, order_id: int, winner_telegram_id: int
 
 async def notify_auction_losers(bot: Bot, order_id: int, winner_user_id: int, cargo_description: str):
     """
-    Уведомляет проигравших участников аукциона
+    Уведомляет проигравших участников подбора
     
     Args:
         bot: Экземпляр бота
@@ -132,10 +132,10 @@ async def notify_auction_losers(bot: Bot, order_id: int, winner_user_id: int, ca
     # Фильтруем победителя (сравниваем user_id из БД, не telegram_id!)
     losers = [p for p in participants if p['user_id'] != winner_user_id]
     
-    print(f"Аукцион #{order_id}: всего участников {len(participants)}, проигравших {len(losers)}, winner_user_id={winner_user_id}")
+    print(f"Подбор #{order_id}: всего участников {len(participants)}, проигравших {len(losers)}, winner_user_id={winner_user_id}")
     
     message_text = (
-        f"Аукцион завершен\n\n"
+        f"Подбор завершен\n\n"
         f"Заявка #{order_id}\n"
         f"Груз: {cargo_description}\n\n"
         f"К сожалению, ваше предложение не было выбрано.\n"
@@ -175,7 +175,7 @@ async def notify_customer_no_bids(bot: Bot, order_id: int, customer_user_id: int
         return False
     
     message_text = (
-        f"Аукцион завершен\n\n"
+        f"Подбор завершен\n\n"
         f"Заявка #{order_id}\n"
         f"Груз: {cargo_description}\n\n"
         f"К сожалению, не поступило ни одного предложения от водителей.\n"
@@ -196,7 +196,7 @@ async def notify_customer_no_bids(bot: Bot, order_id: int, customer_user_id: int
 
 async def notify_customer_auction_complete(bot: Bot, order_id: int, customer_user_id: int, cargo_description: str, winning_price: float, driver_phone: str, driver_username: Optional[str] = None):
     """
-    Уведомляет заказчика о завершении аукциона и победителе
+    Уведомляет заказчика о завершении подбора и победителе
     
     Args:
         bot: Экземпляр бота
@@ -220,7 +220,7 @@ async def notify_customer_auction_complete(bot: Bot, order_id: int, customer_use
         contact_info = f"Телефон: {driver_phone}"
     
     message_text = (
-        f"Аукцион завершен!\n\n"
+        f"Подбор завершен!\n\n"
         f"Заявка #{order_id}\n"
         f"Груз: {cargo_description}\n"
         f"Выигрышная цена: {winning_price} руб.\n\n"
@@ -233,7 +233,7 @@ async def notify_customer_auction_complete(bot: Bot, order_id: int, customer_use
             chat_id=customer['telegram_id'],
             text=message_text
         )
-        print(f"Отправлено уведомление заказчику о завершении аукциона #{order_id}")
+        print(f"Отправлено уведомление заказчику о завершении подбора #{order_id}")
         return True
     except Exception as e:
         print(f"Не удалось отправить уведомление заказчику: {str(e)}")

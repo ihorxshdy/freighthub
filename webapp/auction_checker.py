@@ -1,5 +1,5 @@
 """
-Модуль для проверки завершения аукционов
+Модуль для проверки завершения подборов
 Запускается как отдельный процесс или cron задача
 """
 import sqlite3
@@ -18,14 +18,14 @@ logger = logging.getLogger(__name__)
 
 def check_expired_auctions():
     """
-    Проверяет и завершает истекшие аукционы
+    Проверяет и завершает истекшие подборы
     Должна запускаться периодически (каждую минуту)
     """
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
-    # Находим заказы, у которых истек срок аукциона (expires_at)
+    # Находим заказы, у которых истек срок подбора (expires_at)
     expired_orders = cursor.execute('''
         SELECT id, customer_id, truck_type, cargo_description, delivery_address, pickup_address
         FROM orders
@@ -88,7 +88,7 @@ def check_expired_auctions():
                     customer_phone=customer['phone_number'],
                     driver_phone=winner['phone_number']
                 )
-                logger.info(f"✅ Аукцион завершен: заказ {order_id}, победитель {winner['name']}, цена {winning_bid['price']}")
+                logger.info(f"✅ Подбор завершен: заказ {order_id}, победитель {winner['name']}, цена {winning_bid['price']}")
             except Exception as e:
                 logger.error(f"❌ Ошибка отправки webhook для заказа {order_id}: {e}")
         
@@ -116,7 +116,7 @@ def check_expired_auctions():
                     customer_user_id=customer['telegram_id'],
                     cargo_description=order['cargo_description']
                 )
-                logger.info(f"⚠️ Аукцион без ставок: заказ {order_id}")
+                logger.info(f"⚠️ Подбор без ставок: заказ {order_id}")
             except Exception as e:
                 logger.error(f"❌ Ошибка отправки webhook для заказа {order_id}: {e}")
     
@@ -126,18 +126,18 @@ def check_expired_auctions():
 
 if __name__ == '__main__':
     """
-    Запуск проверки аукционов в цикле
+    Запуск проверки подборов в цикле
     """
     import time
     
-    logger.info("🚀 Запуск проверки аукционов...")
+    logger.info("🚀 Запуск проверки подборов...")
     
     while True:
         try:
             count = check_expired_auctions()
             if count > 0:
-                logger.info(f"⏰ Обработано аукционов: {count}")
+                logger.info(f"⏰ Обработано подборов: {count}")
             time.sleep(30)  # Проверка каждые 30 секунд
         except Exception as e:
-            logger.error(f"❌ Ошибка проверки аукционов: {e}", exc_info=True)
+            logger.error(f"❌ Ошибка проверки подборов: {e}", exc_info=True)
             time.sleep(60)  # При ошибке ждем дольше
