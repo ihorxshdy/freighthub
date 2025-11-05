@@ -179,7 +179,11 @@ def get_customer_orders():
                   MIN(b.price) as min_bid_price,
                   winner.name as winner_name,
                   winner.phone_number as winner_phone,
-                  winner.telegram_id as winner_telegram_id
+                  winner.telegram_id as winner_telegram_id,
+                  o.customer_confirmed,
+                  o.driver_confirmed,
+                  o.cancelled_by,
+                  o.cancellation_reason
            FROM orders o
            LEFT JOIN bids b ON o.id = b.order_id
            LEFT JOIN users winner ON o.winner_driver_id = winner.id
@@ -414,7 +418,11 @@ def get_driver_orders():
     
     # Закрытые заявки
     closed_orders = conn.execute(
-        '''SELECT o.*, b.price as my_bid_price
+        '''SELECT o.*, b.price as my_bid_price,
+                  o.customer_confirmed,
+                  o.driver_confirmed,
+                  o.cancelled_by,
+                  o.cancellation_reason
            FROM orders o
            LEFT JOIN bids b ON o.id = b.order_id AND b.driver_id = ?
            WHERE o.status = 'closed'
@@ -609,9 +617,13 @@ def cancel_order(order_id):
     """Отмена заказа одной из сторон"""
     data = request.json
     telegram_id = data.get('telegram_id')
+    cancellation_reason = data.get('cancellation_reason', '')
     
     if not telegram_id:
         return jsonify({'error': 'telegram_id is required'}), 400
+    
+    if not cancellation_reason:
+        return jsonify({'error': 'cancellation_reason is required'}), 400
     
     conn = get_db_connection()
     
@@ -648,12 +660,12 @@ def cancel_order(order_id):
     # Получаем user_id отменяющего
     cancelled_by_user_id = order['customer_user_id'] if is_customer else order['driver_user_id']
     
-    # Отменяем заказ
+    # Отменяем заказ с сохранением причины
     conn.execute(
         '''UPDATE orders 
-           SET status = ?, cancelled_by = ?, cancelled_at = CURRENT_TIMESTAMP 
+           SET status = ?, cancelled_by = ?, cancelled_at = CURRENT_TIMESTAMP, cancellation_reason = ?
            WHERE id = ?''',
-        ('closed', cancelled_by_user_id, order_id)
+        ('closed', cancelled_by_user_id, cancellation_reason, order_id)
     )
     conn.commit()
     conn.close()

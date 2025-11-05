@@ -19,6 +19,7 @@ const API_BASE = './';
 let currentUser = null;
 let currentTab = null;
 let currentOrderForBid = null;
+let currentOrderForCancellation = null;
 let truckTypesMap = {}; // Маппинг ID -> название типа машины
 let ordersCache = null; // Кэш заказов
 let ordersCacheTime = 0; // Время последнего обновления кэша
@@ -537,7 +538,7 @@ function renderCustomerOrders(orders, container, tabId) {
         <div class="order-card">
             <div class="order-header">
                 <div class="order-number">Заявка #${order.id}</div>
-                <div class="order-status status-${tabId}">${getStatusLabel(tabId)}</div>
+                <div class="order-status status-${tabId}">${tabId === 'closed' ? getDetailedStatus(order) : getStatusLabel(tabId)}</div>
             </div>
             
             <div class="order-route">
@@ -559,6 +560,12 @@ function renderCustomerOrders(orders, container, tabId) {
                 ${order.delivery_date ? `<span>📦 Доставка: ${order.delivery_date}</span>` : ''}
                 ${order.max_price ? `<span>💰 Желаемая цена: ${formatPrice(order.max_price)}</span>` : ''}
             </div>
+            
+            ${tabId === 'closed' && order.cancellation_reason ? `
+                <div class="order-comment">
+                    <strong>Причина отмены:</strong> ${order.cancellation_reason}
+                </div>
+            ` : ''}
             
             ${tabId === 'searching' ? `
                 <div class="order-footer">
@@ -601,7 +608,7 @@ function renderDriverOrders(orders, container, tabId) {
         <div class="order-card">
             <div class="order-header">
                 <div class="order-number">Заявка #${order.id}</div>
-                <div class="order-status status-${tabId}">${getStatusLabel(tabId)}</div>
+                <div class="order-status status-${tabId}">${tabId === 'closed' ? getDetailedStatus(order) : getStatusLabel(tabId)}</div>
             </div>
             
             <div class="order-route">
@@ -622,8 +629,14 @@ function renderDriverOrders(orders, container, tabId) {
                 <span>📅 ${formatDate(order.created_at)}</span>
                 ${order.delivery_date ? `<span>📦 Доставка: ${order.delivery_date}</span>` : ''}
                 ${order.max_price ? `<span>💰 Желаемая цена: ${formatPrice(order.max_price)}</span>` : ''}
-                ${order.total_bids ? `<span>� ${order.total_bids} предложений</span>` : ''}
+                ${order.total_bids ? `<span>💼 ${order.total_bids} предложений</span>` : ''}
             </div>
+            
+            ${tabId === 'closed' && order.cancellation_reason ? `
+                <div class="order-comment">
+                    <strong>Причина отмены:</strong> ${order.cancellation_reason}
+                </div>
+            ` : ''}
             
             <div class="order-footer">
                 ${order.my_bid_price ? `
@@ -736,6 +749,50 @@ function initModals() {
             if (modal) modal.classList.add('hidden');
         });
     });
+
+    // Отмена заявки
+    const cancelOrderModal = document.getElementById('cancel-order-modal');
+    const cancelOrderForm = document.getElementById('cancel-order-form');
+    const cancelCancellationBtn = document.getElementById('cancel-cancellation');
+    
+    if (cancelCancellationBtn) {
+        cancelCancellationBtn.addEventListener('click', () => {
+            cancelOrderModal.classList.add('hidden');
+            cancelOrderForm.reset();
+            currentOrderForCancellation = null;
+        });
+    }
+    
+    if (cancelOrderForm) {
+        cancelOrderForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const reason = document.getElementById('cancellation-reason').value;
+            
+            try {
+                const response = await fetchWithTimeout(`${API_BASE}api/orders/${currentOrderForCancellation}/cancel`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        telegram_id: currentUser.telegram_id,
+                        cancellation_reason: reason
+                    })
+                }, 15000);
+                
+                if (!response.ok) {
+                    throw new Error('Ошибка отмены заказа');
+                }
+                
+                cancelOrderModal.classList.add('hidden');
+                cancelOrderForm.reset();
+                currentOrderForCancellation = null;
+                showSuccess('Заказ отменен');
+                refreshOrders();
+            } catch (error) {
+                showError('Ошибка отмены заказа');
+            }
+        });
+    }
 }
 
 async function loadTruckTypes() {
@@ -884,28 +941,8 @@ window.confirmOrderCompletion = async function(orderId) {
 };
 
 window.cancelOrder = async function(orderId) {
-    if (!confirm('Вы уверены, что хотите отменить заказ?')) {
-        return;
-    }
-    
-    try {
-        const response = await fetchWithTimeout(`${API_BASE}api/orders/${orderId}/cancel`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                telegram_id: currentUser.telegram_id
-            })
-        }, 15000);
-        
-        if (!response.ok) {
-            throw new Error('Ошибка отмены заказа');
-        }
-        
-        showSuccess('Заказ отменен');
-        refreshOrders();
-    } catch (error) {
-        showError('Ошибка отмены заказа');
-    }
+    currentOrderForCancellation = orderId;
+    document.getElementById('cancel-order-modal').classList.remove('hidden');
 };
 
 function showSuccess(message) {
@@ -927,6 +964,27 @@ function getStatusLabel(status) {
         'closed': 'Закрыта'
     };
     return labels[status] || status;
+}
+
+function getDetailedStatus(order) {
+    // Для закрытых заявок определяем детальный статус
+    if (order.status === 'closed') {
+        // Если обе стороны подтвердили выполнение
+        if (order.customer_confirmed && order.driver_confirmed) {
+            return 'Выполнена';
+        }
+        // Если есть отмена
+        if (order.cancelled_by) {
+            // Определяем кто отменил
+            const isCancelledByCustomer = order.cancelled_by === order.customer_id;
+            return isCancelledByCustomer ? 'Отменена (заказчиком)' : 'Отменена (исполнителем)';
+        }
+        // Если нет предложений
+        if (order.status === 'no_offers') {
+            return 'Закрыта (нет предложений)';
+        }
+    }
+    return getStatusLabel(order.status);
 }
 
 function getEmptyMessage(tabId) {

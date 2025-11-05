@@ -187,6 +187,30 @@
                 </div>
             </div>
         </div>
+
+        <!-- Модальное окно отмены заявки -->
+        <div id="cancel-order-modal" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Отмена заявки</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="cancel-order-form">
+                        <div class="form-group">
+                            <label>Укажите причину отмены</label>
+                            <textarea id="cancellation-reason" rows="4" placeholder="Введите причину отмены заявки" required></textarea>
+                        </div>
+
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary" id="cancel-cancellation">Отмена</button>
+                            <button type="submit" class="btn btn-danger">Подтвердить отмену</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="static/js/app.js?v={{ version }}"></script>

@@ -361,6 +361,21 @@ body {
     word-wrap: break-word; /* Переносим длинные слова */
 }
 
+.order-comment {
+    background: var(--tg-theme-secondary-bg-color);
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-top: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.order-comment strong {
+    color: var(--tg-theme-text-color);
+    display: block;
+    margin-bottom: 4px;
+}
+
 .order-meta {
     display: flex;
     flex-wrap: wrap;
