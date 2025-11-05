@@ -457,8 +457,12 @@ async def make_bid_start(callback: CallbackQuery, state: FSMContext, bot: Bot):
         return
     
     order = await get_order_by_id(order_id)
-    if not order or order['status'] != 'active':
-        await callback.answer("❌ Заявка больше не активна!")
+    if not order:
+        await callback.answer("❌ Заявка не найдена!")
+        return
+        
+    if order['status'] not in ['active']:
+        await callback.answer("❌ Заявка больше не активна! Прием предложений завершен.")
         return
     
     truck_name = get_truck_display_name(order['truck_type'])
@@ -500,6 +504,15 @@ async def bid_price_received(message: Message, state: FSMContext, bot: Bot):
         
         user = await get_user_by_telegram_id(message.from_user.id)
         order = await get_order_by_id(order_id)
+        
+        # Проверяем, что заказ еще активен
+        if not order or order['status'] not in ['active']:
+            await message.answer(
+                "❌ К сожалению, прием предложений по этой заявке уже завершен.\n"
+                "Заявка больше не активна."
+            )
+            await state.clear()
+            return
         
         await create_bid(order_id, user['id'], price)
         

@@ -405,7 +405,6 @@ function initTabs() {
         tabs = [
             { id: 'searching', label: 'Поиск исполнителей', icon: '' },
             { id: 'created', label: 'Созданные', icon: '' },
-            { id: 'auction_completed', label: 'Выбор исполнителя', icon: '' },
             { id: 'in_progress', label: 'В процессе', icon: '' },
             { id: 'closed', label: 'Закрытые', icon: '' }
         ];
@@ -539,7 +538,7 @@ function renderCustomerOrders(orders, container, tabId) {
         <div class="order-card">
             <div class="order-header">
                 <div class="order-number">Заявка #${order.id}</div>
-                <div class="order-status status-${tabId}">${tabId === 'closed' ? getDetailedStatus(order) : getStatusLabel(tabId)}</div>
+                <div class="order-status status-${tabId}">${(tabId === 'closed' || tabId === 'in_progress') ? getDetailedStatus(order) : getStatusLabel(tabId)}</div>
             </div>
             
             <div class="order-route">
@@ -579,7 +578,7 @@ function renderCustomerOrders(orders, container, tabId) {
                     </button>
                 </div>
             ` : ''}
-            ${tabId === 'auction_completed' ? `
+            ${tabId === 'in_progress' && order.status === 'auction_completed' ? `
                 <div class="order-footer">
                     <div class="bids-info">
                         Получено предложений: <span class="bids-count">${order.bids_count || 0}</span>
@@ -590,7 +589,7 @@ function renderCustomerOrders(orders, container, tabId) {
                     </button>
                 </div>
             ` : ''}
-            ${tabId === 'in_progress' ? `
+            ${tabId === 'in_progress' && order.status === 'in_progress' ? `
                 <div style="display: flex; gap: 10px; margin-top: 10px;">
                     <button class="btn btn-small btn-success" onclick="confirmOrderCompletion(${order.id})" style="flex: 1;">
                         Подтвердить выполнение
@@ -620,7 +619,7 @@ function renderDriverOrders(orders, container, tabId) {
         <div class="order-card">
             <div class="order-header">
                 <div class="order-number">Заявка #${order.id}</div>
-                <div class="order-status status-${tabId}">${tabId === 'closed' ? getDetailedStatus(order) : getStatusLabel(tabId)}</div>
+                <div class="order-status status-${tabId}">${(tabId === 'closed' || tabId === 'in_progress') ? getDetailedStatus(order) : getStatusLabel(tabId)}</div>
             </div>
             
             <div class="order-route">
@@ -1041,6 +1040,12 @@ function getDetailedStatus(order) {
             return 'Закрыта (нет предложений)';
         }
     }
+    
+    // Для заявок с завершенным подбором
+    if (order.status === 'auction_completed') {
+        return 'Прием заявок завершен';
+    }
+    
     return getStatusLabel(order.status);
 }
 

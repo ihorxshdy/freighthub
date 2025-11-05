@@ -197,11 +197,10 @@ def get_customer_orders():
     
     # Группируем по статусам
     result = {
-        'searching': [],        # Идет поиск исполнителей (active + есть предложения)
-        'created': [],          # Созданные заявки (active + нет предложений)
-        'auction_completed': [], # Прием заявок завершен - можно выбрать исполнителя
-        'in_progress': [],      # В процессе выполнения
-        'closed': []            # Завершенные/отмененные заявки
+        'searching': [],    # Идет поиск исполнителей (active + есть предложения)
+        'created': [],      # Созданные заявки (active + нет предложений)
+        'in_progress': [],  # В процессе выполнения + Прием заявок завершен (auction_completed)
+        'closed': []        # Завершенные/отмененные заявки
     }
     
     for order in orders:
@@ -213,7 +212,8 @@ def get_customer_orders():
         elif status == 'in_progress':
             result['in_progress'].append(order_data)
         elif status == 'auction_completed':
-            result['auction_completed'].append(order_data)
+            # Заявки с завершенным подбором показываем во вкладке "В процессе"
+            result['in_progress'].append(order_data)
         elif status == 'active':
             if order_data['bids_count'] > 0:
                 result['searching'].append(order_data)
