@@ -524,12 +524,17 @@ function updateBadges(orders) {
 
 // Инициализация слайдеров для подтверждения выполнения заказа
 function initSlideToConfirm() {
-    const sliders = document.querySelectorAll('.slide-to-confirm');
+    const sliders = document.querySelectorAll('.slide-to-confirm:not(.confirmed)');
     
     sliders.forEach(slider => {
         const button = slider.querySelector('.slide-button');
         const track = slider.querySelector('.slide-track');
         const orderId = slider.dataset.orderId;
+        
+        // Пропускаем уже подтвержденные слайдеры
+        if (!button || slider.classList.contains('confirmed')) {
+            return;
+        }
         
         let isDragging = false;
         let startX = 0;
@@ -577,7 +582,9 @@ function initSlideToConfirm() {
             if (currentX > maxDrag * 0.9) {
                 // Успешное подтверждение
                 slider.classList.add('confirmed');
-                button.style.transform = `translateX(${maxDrag}px)`;
+                button.style.display = 'none';
+                track.querySelector('.slide-text').textContent = '✓ Подтверждено';
+                track.querySelector('.slide-text').style.opacity = '1';
                 
                 // Вызываем функцию подтверждения заказа
                 await confirmOrderCompletion(orderId);
@@ -671,14 +678,22 @@ function renderCustomerOrders(orders, container, tabId) {
             ` : ''}
             ${tabId === 'in_progress' && order.status === 'in_progress' ? `
                 <div style="margin-top: 10px;">
-                    <div class="slide-to-confirm" id="slide-confirm-${order.id}" data-order-id="${order.id}">
-                        <div class="slide-track">
-                            <span class="slide-text">Проведите для подтверждения</span>
+                    ${order.customer_confirmed ? `
+                        <div class="slide-to-confirm confirmed">
+                            <div class="slide-track">
+                                <span class="slide-text">✓ Ожидание подтверждения водителем</span>
+                            </div>
                         </div>
-                        <div class="slide-button">
-                            <span class="slide-icon">→</span>
+                    ` : `
+                        <div class="slide-to-confirm" id="slide-confirm-${order.id}" data-order-id="${order.id}" data-role="customer">
+                            <div class="slide-track">
+                                <span class="slide-text">Проведите для подтверждения</span>
+                            </div>
+                            <div class="slide-button">
+                                <span class="slide-icon">→</span>
+                            </div>
                         </div>
-                    </div>
+                    `}
                 </div>
                 <div style="margin-top: 10px;">
                     <button class="btn btn-small btn-danger" onclick="cancelOrder(${order.id})" style="width: 100%;">
@@ -750,14 +765,22 @@ function renderDriverOrders(orders, container, tabId) {
                 ` : ''}
                 ${tabId === 'in_progress' ? `
                     <div style="margin-top: 10px;">
-                        <div class="slide-to-confirm" id="slide-confirm-driver-${order.id}" data-order-id="${order.id}">
-                            <div class="slide-track">
-                                <span class="slide-text">Проведите для подтверждения</span>
+                        ${order.driver_confirmed ? `
+                            <div class="slide-to-confirm confirmed">
+                                <div class="slide-track">
+                                    <span class="slide-text">✓ Ожидание подтверждения заказчиком</span>
+                                </div>
                             </div>
-                            <div class="slide-button">
-                                <span class="slide-icon">→</span>
+                        ` : `
+                            <div class="slide-to-confirm" id="slide-confirm-driver-${order.id}" data-order-id="${order.id}" data-role="driver">
+                                <div class="slide-track">
+                                    <span class="slide-text">Проведите для подтверждения</span>
+                                </div>
+                                <div class="slide-button">
+                                    <span class="slide-icon">→</span>
+                                </div>
                             </div>
-                        </div>
+                        `}
                     </div>
                 ` : ''}
             </div>

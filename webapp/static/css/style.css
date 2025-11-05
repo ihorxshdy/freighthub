@@ -728,14 +728,16 @@ body.role-customer .fab {
 
 .slide-to-confirm.confirmed {
     background: #4CAF50;
+    pointer-events: none;
 }
 
 .slide-to-confirm.confirmed .slide-text {
     color: #ffffff;
+    font-weight: 700;
 }
 
-.slide-to-confirm.confirmed .slide-icon {
-    content: '✓';
+.slide-to-confirm.confirmed .slide-button {
+    display: none;
 }
 
 /* === RESPONSIVE === */
