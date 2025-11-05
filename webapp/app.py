@@ -450,7 +450,8 @@ def get_driver_orders():
     # В процессе выполнения (где этот водитель - исполнитель)
     in_progress_orders = conn.execute(
         '''SELECT o.*, b.price as my_bid_price, u.name as customer_name, 
-                  u.phone_number as customer_phone, u.telegram_id as customer_telegram_id
+                  u.phone_number as customer_phone, u.telegram_id as customer_telegram_id,
+                  o.customer_confirmed, o.driver_confirmed
            FROM orders o
            JOIN bids b ON o.id = b.order_id AND b.driver_id = ?
            JOIN users u ON o.customer_id = u.id
