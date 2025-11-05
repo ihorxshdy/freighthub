@@ -22,8 +22,11 @@ def check_expired_auctions():
     НОВАЯ ЛОГИКА: После истечения времени заявка НЕ закрывается автоматически,
     а переходит в статус "auction_completed" для ручного выбора заказчиком
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    # Увеличиваем таймаут и включаем WAL режим для избежания блокировок
+    conn = sqlite3.connect(DATABASE_PATH, timeout=30.0)
     conn.row_factory = sqlite3.Row
+    conn.execute('PRAGMA journal_mode=WAL')
+    conn.execute('PRAGMA busy_timeout=30000')
     cursor = conn.cursor()
     
     # Находим заказы, у которых истек срок подбора (expires_at)

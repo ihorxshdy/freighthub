@@ -32,8 +32,13 @@ def get_db_connection():
     if db_dir and not os.path.exists(db_dir):
         os.makedirs(db_dir, exist_ok=True)
     
-    conn = sqlite3.connect(DATABASE_PATH)
+    # Увеличиваем таймаут для избежания блокировок
+    conn = sqlite3.connect(DATABASE_PATH, timeout=30.0)
     conn.row_factory = sqlite3.Row
+    
+    # Включаем WAL режим для лучшей работы с конкурентными записями
+    conn.execute('PRAGMA journal_mode=WAL')
+    conn.execute('PRAGMA busy_timeout=30000')
     
     # Инициализируем БД если таблиц нет
     cursor = conn.cursor()
@@ -43,8 +48,10 @@ def get_db_connection():
         from init_db import init_database
         conn.close()
         init_database()
-        conn = sqlite3.connect(DATABASE_PATH)
+        conn = sqlite3.connect(DATABASE_PATH, timeout=30.0)
         conn.row_factory = sqlite3.Row
+        conn.execute('PRAGMA journal_mode=WAL')
+        conn.execute('PRAGMA busy_timeout=30000')
     
     return conn
 
