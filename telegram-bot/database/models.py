@@ -46,6 +46,7 @@ async def init_database():
                 cancelled_by INTEGER,
                 cancelled_at TIMESTAMP,
                 cancellation_reason TEXT,
+                selection_ended BOOLEAN DEFAULT FALSE,
                 FOREIGN KEY (customer_id) REFERENCES users (id),
                 FOREIGN KEY (winner_driver_id) REFERENCES users (id),
                 FOREIGN KEY (cancelled_by) REFERENCES users (id)

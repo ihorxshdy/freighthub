@@ -81,7 +81,7 @@ async def check_new_orders(bot: Bot):
 
 
 async def check_expired_auctions(bot: Bot):
-    """Проверка завершенных подборов и выбор победителя"""
+    """Проверка завершенных подборов - просто помечаем что прием заявок завершен"""
     while True:
         try:
             async with aiosqlite.connect(DB_PATH) as db:
@@ -89,90 +89,43 @@ async def check_expired_auctions(bot: Bot):
                 now = datetime.now()
                 
                 async with db.execute("""
-                    SELECT id, customer_id, cargo_description, delivery_address
+                    SELECT id, customer_id, cargo_description
                     FROM orders
                     WHERE status = 'active'
+                    AND selection_ended = FALSE
                     AND datetime(expires_at) <= datetime(?)
                 """, (now.isoformat(),)) as cursor:
                     expired_orders = await cursor.fetchall()
                 
-                for order_id, customer_id, cargo_description, delivery_address in expired_orders:
-                    # Получаем лучшее предложение (с наименьшей ценой)
-                    async with db.execute("""
-                        SELECT driver_id, price
-                        FROM bids
-                        WHERE order_id = ?
-                        ORDER BY price ASC
-                        LIMIT 1
-                    """, (order_id,)) as cursor:
-                        best_bid = await cursor.fetchone()
+                for order_id, customer_id, cargo_description in expired_orders:
+                    # Просто помечаем что прием заявок завершен
+                    # Заказчик сам выберет исполнителя
+                    await db.execute("""
+                        UPDATE orders
+                        SET selection_ended = TRUE
+                        WHERE id = ?
+                    """, (order_id,))
                     
-                    if best_bid:
-                        winner_user_id, winning_price = best_bid
-                        
-                        # Обновляем заказ - устанавливаем победителя
-                        await db.execute("""
-                            UPDATE orders
-                            SET winner_driver_id = ?, winning_price = ?, status = 'completed'
-                            WHERE id = ?
-                        """, (winner_user_id, winning_price, order_id))
-                        
-                        await db.commit()
-                        
-                        # Получаем информацию о заказчике и водителе
-                        customer = await get_user_by_id(customer_id)
-                        winner = await get_user_by_id(winner_user_id)
-                        
-                        if customer and winner:
-                            # Уведомляем победителя
-                            await notify_auction_winner(
-                                bot=bot,
-                                order_id=order_id,
-                                winner_user_id=winner_user_id,
-                                winning_price=winning_price,
-                                cargo_description=cargo_description,
-                                delivery_address=delivery_address,
-                                customer_phone=customer['phone_number']
-                            )
-                            
-                            # Уведомляем проигравших
-                            await notify_auction_losers(
-                                bot=bot,
-                                order_id=order_id,
-                                winner_user_id=winner_user_id,
-                                cargo_description=cargo_description
-                            )
-                            
-                            # Уведомляем заказчика
-                            await notify_customer_auction_complete(
-                                bot=bot,
-                                order_id=order_id,
-                                customer_user_id=customer_id,
-                                cargo_description=cargo_description,
-                                winning_price=winning_price,
-                                driver_phone=winner['phone_number']
-                            )
-                        
-                        logger.info(f"Подбор для заказа {order_id} завершен. Победитель: водитель {winner_user_id}, цена: {winning_price}")
-                    else:
-                        # Нет ставок - меняем статус на no_offers
-                        await db.execute("""
-                            UPDATE orders
-                            SET status = 'no_offers'
-                            WHERE id = ?
-                        """, (order_id,))
-                        
-                        await db.commit()
-                        
-                        logger.info(f"Заказ {order_id} не получил ставок за время подбора")
-                        
-                        # Уведомляем заказчика об отсутствии предложений
+                    await db.commit()
+                    
+                    # Проверяем есть ли предложения
+                    async with db.execute("""
+                        SELECT COUNT(*) FROM bids WHERE order_id = ?
+                    """, (order_id,)) as cursor:
+                        bids_count_row = await cursor.fetchone()
+                        bids_count = bids_count_row[0] if bids_count_row else 0
+                    
+                    if bids_count == 0:
+                        # Нет предложений - уведомляем заказчика
                         await notify_customer_no_bids(
                             bot=bot,
                             order_id=order_id,
                             customer_user_id=customer_id,
                             cargo_description=cargo_description
                         )
+                        logger.info(f"Заказ {order_id} не получил ставок за время подбора")
+                    else:
+                        logger.info(f"Прием заявок для заказа {order_id} завершен. Получено предложений: {bids_count}")
             
         except Exception as e:
             logger.error(f"Ошибка проверки подборов: {e}")
