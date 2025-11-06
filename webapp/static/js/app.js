@@ -62,7 +62,18 @@ function formatLocalDateTime(utcDateString) {
     if (!utcDateString) return '';
     
     try {
-        const date = new Date(utcDateString);
+        // Если дата не содержит информации о временной зоне, добавляем UTC
+        let dateToFormat = utcDateString;
+        if (!utcDateString.includes('Z') && !utcDateString.includes('+') && !utcDateString.includes('T')) {
+            // Формат SQLite: YYYY-MM-DD HH:MM:SS - добавляем 'Z' чтобы указать что это UTC
+            dateToFormat = utcDateString.replace(' ', 'T') + 'Z';
+        } else if (utcDateString.includes(' ') && !utcDateString.includes('Z')) {
+            // Если есть пробел вместо T, но нет Z
+            dateToFormat = utcDateString.replace(' ', 'T') + 'Z';
+        }
+        
+        const date = new Date(dateToFormat);
+        if (isNaN(date.getTime())) return utcDateString;
         
         // Форматируем дату и время по местному часовому поясу
         const options = {
@@ -1305,15 +1316,25 @@ window.viewOrderBids = async function(orderId) {
             bidsList.innerHTML = bids.map((bid, index) => `
                 <div class="bid-card">
                     <div class="bid-header">
-                        <div class="bid-driver">${index + 1}. ${bid.name || 'Водитель'}</div>
+                        <div class="bid-driver">
+                            ${index + 1}. ${bid.name || 'Водитель'}
+                            <div class="driver-rating">
+                                ${renderStars(bid.driver_rating || 0)} ${(bid.driver_rating || 0).toFixed(1)} (${bid.review_count || 0})
+                            </div>
+                        </div>
                         <div class="bid-price">${formatPrice(bid.price)}</div>
                     </div>
                     <div class="bid-meta">
                         <span> ${formatDate(bid.created_at)}</span>
                     </div>
-                    <button class="btn btn-primary" onclick="selectWinner(${orderId}, ${bid.id})" style="width: 100%; margin-top: 10px;">
-                        Выбрать исполнителем
-                    </button>
+                    <div style="display: flex; gap: 8px; margin-top: 10px;">
+                        <button class="btn btn-secondary" onclick="openProfile(${bid.driver_id})" style="flex: 1;">
+                            Профиль
+                        </button>
+                        <button class="btn btn-primary" onclick="selectWinner(${orderId}, ${bid.id})" style="flex: 2;">
+                            Выбрать исполнителем
+                        </button>
+                    </div>
                 </div>
             `).join('');
         }
@@ -1364,17 +1385,28 @@ window.viewAndSelectBids = async function(orderId) {
             bidsList.innerHTML = bids.map((bid, index) => `
                 <div class="bid-card">
                     <div class="bid-header">
-                        <div class="bid-driver">${index + 1}. ${bid.name || 'Водитель'}</div>
+                        <div class="bid-driver">
+                            ${index + 1}. ${bid.name || 'Водитель'}
+                            <div class="driver-rating">
+                                ${renderStars(bid.driver_rating || 0)} ${(bid.driver_rating || 0).toFixed(1)} (${bid.review_count || 0})
+                            </div>
+                        </div>
                         <div class="bid-price">${formatPrice(bid.price)}</div>
                     </div>
                     <div class="bid-contact">
-                        📞 ${bid.phone_number || 'Телефон не указан'}
+                        ${bid.phone_number || 'Телефон не указан'}
                     </div>
                     <div class="bid-meta">
-                        <span>📅 ${formatDate(bid.created_at)}</span>
+                        <span>${formatDate(bid.created_at)}</span>
                     </div>
-                    <button class="btn btn-success" onclick="selectWinner(${orderId}, ${bid.id})" style="width: 100%; margin-top: 10px;">
-                        ✅ Выбрать исполнителем
+                    <div style="display: flex; gap: 8px; margin-top: 10px;">
+                        <button class="btn btn-secondary" onclick="openProfile(${bid.driver_id})" style="flex: 1;">
+                            Профиль
+                        </button>
+                        <button class="btn btn-success" onclick="selectWinner(${orderId}, ${bid.id})" style="flex: 2;">
+                            Выбрать исполнителем
+                        </button>
+                    </div>
                     </button>
                 </div>
             `).join('');
@@ -1489,17 +1521,32 @@ function formatPrice(price) {
 function formatDate(dateString) {
     if (!dateString) return 'Не указано';
     
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'Неверная дата';
-    
-    // Всегда показываем полную дату и время
-    return date.toLocaleString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    try {
+        // Если дата не содержит информации о временной зоне, добавляем UTC
+        let dateToFormat = dateString;
+        if (!dateString.includes('Z') && !dateString.includes('+') && !dateString.includes('T')) {
+            // Формат SQLite: YYYY-MM-DD HH:MM:SS - добавляем 'Z' чтобы указать что это UTC
+            dateToFormat = dateString.replace(' ', 'T') + 'Z';
+        } else if (dateString.includes(' ') && !dateString.includes('Z')) {
+            // Если есть пробел вместо T, но нет Z
+            dateToFormat = dateString.replace(' ', 'T') + 'Z';
+        }
+        
+        const date = new Date(dateToFormat);
+        if (isNaN(date.getTime())) return 'Неверная дата';
+        
+        // Форматируем в локальное время пользователя
+        return date.toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch (e) {
+        console.error('Ошибка форматирования даты:', e);
+        return dateString;
+    }
 }
 
 function showError(message) {

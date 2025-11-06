@@ -365,10 +365,17 @@ def get_order_bids(order_id):
     
     # Получаем предложения с полной информацией о водителях
     bids = conn.execute(
-        '''SELECT b.*, u.name, u.phone_number, u.telegram_id as driver_telegram_id
+        '''SELECT b.*, 
+                  u.name, 
+                  u.phone_number, 
+                  u.telegram_id as driver_telegram_id,
+                  COALESCE(AVG(r.rating), 0) as driver_rating,
+                  COUNT(r.id) as review_count
            FROM bids b
            JOIN users u ON b.driver_id = u.id
+           LEFT JOIN reviews r ON r.reviewee_id = u.id
            WHERE b.order_id = ?
+           GROUP BY b.id, u.id
            ORDER BY b.price ASC''',
         (order_id,)
     ).fetchall()

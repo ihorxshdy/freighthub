@@ -1219,6 +1219,16 @@ body.role-customer .fab {
     font-weight: 600;
 }
 
+.driver-rating {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--tg-theme-hint-color);
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .bid-price {
     font-size: 18px;
     font-weight: 700;
