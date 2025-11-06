@@ -563,8 +563,9 @@ function getStarsHTML(rating) {
 }
 
 // Открытие профиля
-async function openProfile() {
-    await loadProfileData(currentUser.telegram_id);
+async function openProfile(userId = null) {
+    const targetUserId = userId || currentUser.telegram_id;
+    await loadProfileData(targetUserId);
     showScreen('profile-screen');
 }
 
@@ -576,6 +577,10 @@ function closeProfile() {
 // Загрузка данных профиля
 async function loadProfileData(telegramId) {
     try {
+        // Получаем данные пользователя
+        const userResponse = await fetchWithTimeout(`${API_BASE}api/user/${telegramId}`, {}, 10000);
+        const userData = await userResponse.json();
+        
         const [rating, stats, reviews] = await Promise.all([
             fetchUserRating(telegramId),
             fetchUserStats(telegramId),
@@ -583,23 +588,14 @@ async function loadProfileData(telegramId) {
         ]);
         
         // Обновляем данные профиля
-        const telegramUser = getTelegramUser();
         const avatarLarge = document.getElementById('profile-avatar-large');
         
-        if (telegramUser && telegramUser.photo_url) {
-            avatarLarge.style.backgroundImage = `url(${telegramUser.photo_url})`;
-            avatarLarge.style.backgroundSize = 'cover';
-            avatarLarge.style.backgroundPosition = 'center';
-            avatarLarge.textContent = '';
-        } else {
-            const initial = (currentUser.name || 'U').charAt(0).toUpperCase();
-            avatarLarge.textContent = initial;
-            avatarLarge.style.backgroundImage = '';
-        }
+        avatarLarge.textContent = (userData.name || 'U').charAt(0).toUpperCase();
+        avatarLarge.style.backgroundImage = '';
         
-        document.getElementById('profile-name-large').textContent = currentUser.name || 'Пользователь';
-        document.getElementById('profile-phone-large').textContent = formatPhoneNumber(currentUser.phone_number);
-        document.getElementById('profile-role-large').textContent = currentUser.role === 'customer' ? 'Заказчик' : 'Водитель';
+        document.getElementById('profile-name-large').textContent = userData.name || 'Пользователь';
+        document.getElementById('profile-phone-large').textContent = formatPhoneNumber(userData.phone_number || '');
+        document.getElementById('profile-role-large').textContent = userData.role === 'customer' ? 'Заказчик' : 'Водитель';
         
         // Статистика
         document.getElementById('stat-orders').textContent = stats.total_orders || 0;
@@ -1365,12 +1361,12 @@ window.viewOrderBids = async function(orderId) {
                     <div class="bid-meta">
                         <span> ${formatDate(bid.created_at)}</span>
                     </div>
-                    <div style="display: flex; gap: 8px; margin-top: 10px;">
+                    <div class="bid-actions">
                         <button class="btn btn-secondary" onclick="openProfile(${bid.driver_id})" style="flex: 1;">
                             Профиль
                         </button>
                         <button class="btn btn-primary" onclick="selectWinner(${orderId}, ${bid.id})" style="flex: 2;">
-                            Выбрать исполнителем
+                            Выбрать
                         </button>
                     </div>
                 </div>
@@ -1441,15 +1437,14 @@ window.viewAndSelectBids = async function(orderId) {
                     <div class="bid-meta">
                         <span>${formatDate(bid.created_at)}</span>
                     </div>
-                    <div style="display: flex; gap: 8px; margin-top: 10px;">
+                    <div class="bid-actions">
                         <button class="btn btn-secondary" onclick="openProfile(${bid.driver_id})" style="flex: 1;">
                             Профиль
                         </button>
                         <button class="btn btn-success" onclick="selectWinner(${orderId}, ${bid.id})" style="flex: 2;">
-                            Выбрать исполнителем
+                            Выбрать
                         </button>
                     </div>
-                    </button>
                 </div>
             `).join('');
         }
@@ -1615,7 +1610,7 @@ function contactAdmin() {
 }
 
 // Открыть модальное окно для оценки пользователя
-function openReviewModal(orderId, userId, userName) {
+window.openReviewModal = function(orderId, userId, userName) {
     const modal = document.getElementById('review-modal');
     document.getElementById('review-order-id').value = orderId;
     document.getElementById('review-user-id').value = userId;
@@ -1627,6 +1622,6 @@ function openReviewModal(orderId, userId, userName) {
     document.getElementById('review-comment').value = '';
     
     modal.classList.remove('hidden');
-}
+};
 
 

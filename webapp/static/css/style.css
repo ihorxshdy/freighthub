@@ -1247,6 +1247,18 @@ body.role-customer .fab {
     color: var(--tg-theme-hint-color);
 }
 
+.bid-card .bid-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.bid-card .bid-actions .btn {
+    padding: 8px 12px;
+    font-size: 14px;
+    min-height: 36px;
+}
+
 /* === SLIDE TO CONFIRM === */
 .slide-to-confirm {
     position: relative;

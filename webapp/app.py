@@ -905,6 +905,23 @@ def debug_db_info():
             'database_path': DATABASE_PATH
         }), 500
 
+@app.route('/api/user/<int:telegram_id>', methods=['GET'])
+def get_user_info(telegram_id):
+    """Получение информации о пользователе"""
+    conn = get_db_connection()
+    
+    user = conn.execute(
+        'SELECT id, telegram_id, name, phone_number, role FROM users WHERE telegram_id = ?',
+        (telegram_id,)
+    ).fetchone()
+    
+    conn.close()
+    
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    return jsonify(dict_from_row(user))
+
 @app.route('/api/user/<int:telegram_id>/rating', methods=['GET'])
 def get_user_rating(telegram_id):
     """Получение рейтинга пользователя"""
