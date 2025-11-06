@@ -838,15 +838,15 @@ function renderCustomerOrders(orders, container, tabId) {
             <div class="order-route">
                 <div class="route-point">
                     <span class="route-icon">▸</span>
-                    <span>${order.pickup_address}</span>
+                    <span><strong>Адрес отправки:</strong> ${order.pickup_address}</span>
                 </div>
                 <div class="route-point">
                     <span class="route-icon">▸</span>
-                    <span>${order.delivery_address}</span>
+                    <span><strong>Адрес доставки:</strong> ${order.delivery_address}</span>
                 </div>
             </div>
             
-            <div class="order-description">${order.cargo_description}</div>
+            <div class="order-description"><strong>Описание:</strong> ${order.cargo_description}</div>
             
             <div class="order-meta">
                 <span>${getTruckTypeName(order.truck_type)}</span>
@@ -953,15 +953,15 @@ function renderDriverOrders(orders, container, tabId) {
             <div class="order-route">
                 <div class="route-point">
                     <span class="route-icon">▸</span>
-                    <span>${order.pickup_address}</span>
+                    <span><strong>Адрес отправки:</strong> ${order.pickup_address}</span>
                 </div>
                 <div class="route-point">
                     <span class="route-icon">▸</span>
-                    <span>${order.delivery_address}</span>
+                    <span><strong>Адрес доставки:</strong> ${order.delivery_address}</span>
                 </div>
             </div>
             
-            <div class="order-description">${order.cargo_description}</div>
+            <div class="order-description"><strong>Описание:</strong> ${order.cargo_description}</div>
             
             <div class="order-meta">
                 <span>${getTruckTypeName(order.truck_type)}</span>
@@ -1447,7 +1447,7 @@ function getDetailedStatus(order) {
         }
         // Если нет предложений
         if (order.status === 'no_offers') {
-            return 'Закрыта (нет предложений)';
+            return 'Предложений не поступило';
         }
     }
     
