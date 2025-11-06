@@ -7,9 +7,48 @@ if (tg) {
         tg.ready();
         // Скрываем нижнюю кнопку "Приложение"
         tg.MainButton.hide();
+        
+        // Применяем тему Telegram
+        applyTelegramTheme();
     } catch (e) {
         console.error('Ошибка инициализации Telegram WebApp:', e);
     }
+}
+
+// Применение темы Telegram
+function applyTelegramTheme() {
+    if (!tg) return;
+    
+    // Определяем тему на основе цвета фона
+    const bgColor = tg.themeParams?.bg_color || tg.backgroundColor;
+    
+    if (bgColor) {
+        // Простая эвристика: если фон темный, применяем темную тему
+        const isDark = isColorDark(bgColor);
+        
+        if (isDark) {
+            document.body.classList.add('theme-dark');
+        } else {
+            document.body.classList.remove('theme-dark');
+        }
+    }
+}
+
+// Определение, является ли цвет темным
+function isColorDark(color) {
+    // Убираем # если есть
+    const hex = color.replace('#', '');
+    
+    // Конвертируем в RGB
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    // Вычисляем яркость (weighted luminance formula)
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    
+    // Если яркость меньше 128, цвет темный
+    return brightness < 128;
 }
 
 // Базовый путь для API запросов (поддержка вложенных путей)
@@ -424,9 +463,10 @@ async function showMainScreen() {
         avatar.style.backgroundPosition = 'center';
         avatar.textContent = '';
     } else {
-        // Используем первую букву имени как fallback
-        const initial = (currentUser.name || 'П').charAt(0).toUpperCase();
+        // Используем первую букву имени
+        const initial = (currentUser.name || 'U').charAt(0).toUpperCase();
         avatar.textContent = initial;
+        avatar.style.backgroundImage = '';
     }
     
     // Инициализируем меню навигации
@@ -513,8 +553,9 @@ async function loadProfileData(telegramId) {
             avatarLarge.style.backgroundPosition = 'center';
             avatarLarge.textContent = '';
         } else {
-            const initial = (currentUser.name || 'П').charAt(0).toUpperCase();
+            const initial = (currentUser.name || 'U').charAt(0).toUpperCase();
             avatarLarge.textContent = initial;
+            avatarLarge.style.backgroundImage = '';
         }
         
         document.getElementById('profile-name-large').textContent = currentUser.name || 'Пользователь';
@@ -573,17 +614,17 @@ function initNavMenu() {
     
     if (currentUser.role === 'customer') {
         menuItems = [
-            { id: 'searching', label: 'Поиск исполнителей', icon: '🔍' },
-            { id: 'created', label: 'Созданные заявки', icon: '📝' },
-            { id: 'in_progress', label: 'В процессе', icon: '🚚' },
-            { id: 'closed', label: 'Закрытые', icon: '✅' }
+            { id: 'searching', label: 'Поиск исполнителей', icon: '◉' },
+            { id: 'created', label: 'Созданные заявки', icon: '○' },
+            { id: 'in_progress', label: 'В процессе', icon: '⟳' },
+            { id: 'closed', label: 'Закрытые', icon: '✓' }
         ];
     } else {
         menuItems = [
-            { id: 'open', label: 'Открытые заявки', icon: '📦' },
-            { id: 'my_bids', label: 'Мои предложения', icon: '💰' },
-            { id: 'in_progress', label: 'В процессе', icon: '🚛' },
-            { id: 'closed', label: 'Завершённые', icon: '✅' }
+            { id: 'open', label: 'Открытые заявки', icon: '□' },
+            { id: 'my_bids', label: 'Мои предложения', icon: '▪' },
+            { id: 'in_progress', label: 'В процессе', icon: '⟳' },
+            { id: 'closed', label: 'Завершённые', icon: '✓' }
         ];
     }
     
@@ -789,7 +830,7 @@ function renderCustomerOrders(orders, container, tabId) {
     if (!orders || orders.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <div class="empty-icon">📦</div>
+                <div class="empty-icon">●</div>
                 <div class="empty-title">Нет заявок</div>
                 <div class="empty-description">Создайте новую заявку на грузоперевозку</div>
             </div>
@@ -806,11 +847,11 @@ function renderCustomerOrders(orders, container, tabId) {
             
             <div class="order-route">
                 <div class="route-point">
-                    <span class="route-icon">📍</span>
+                    <span class="route-icon">▸</span>
                     <span>${order.pickup_address}</span>
                 </div>
                 <div class="route-point">
-                    <span class="route-icon">🎯</span>
+                    <span class="route-icon">▸</span>
                     <span>${order.delivery_address}</span>
                 </div>
             </div>
@@ -818,10 +859,10 @@ function renderCustomerOrders(orders, container, tabId) {
             <div class="order-description">${order.cargo_description}</div>
             
             <div class="order-meta">
-                <span>🚛 ${getTruckTypeName(order.truck_type)}</span>
-                <span>📅 ${formatDate(order.created_at)}</span>
-                ${order.delivery_date ? `<span>📦 Доставка: ${order.delivery_date}</span>` : ''}
-                ${order.max_price ? `<span>💰 Желаемая цена: ${formatPrice(order.max_price)}</span>` : ''}
+                <span>${getTruckTypeName(order.truck_type)}</span>
+                <span>${formatDate(order.created_at)}</span>
+                ${order.delivery_date ? `<span>Доставка: ${order.delivery_date}</span>` : ''}
+                ${order.max_price ? `<span>Цена: ${formatPrice(order.max_price)}</span>` : ''}
             </div>
             
             ${tabId === 'closed' && order.cancellation_reason ? `
@@ -905,7 +946,7 @@ function renderDriverOrders(orders, container, tabId) {
     if (!orders || orders.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <div class="empty-icon">🚛</div>
+                <div class="empty-icon">●</div>
                 <div class="empty-title">Нет заявок</div>
                 <div class="empty-description">${getEmptyMessage(tabId)}</div>
             </div>
@@ -922,11 +963,11 @@ function renderDriverOrders(orders, container, tabId) {
             
             <div class="order-route">
                 <div class="route-point">
-                    <span class="route-icon">📍</span>
+                    <span class="route-icon">▸</span>
                     <span>${order.pickup_address}</span>
                 </div>
                 <div class="route-point">
-                    <span class="route-icon">🎯</span>
+                    <span class="route-icon">▸</span>
                     <span>${order.delivery_address}</span>
                 </div>
             </div>
@@ -934,11 +975,11 @@ function renderDriverOrders(orders, container, tabId) {
             <div class="order-description">${order.cargo_description}</div>
             
             <div class="order-meta">
-                <span>🚛 ${getTruckTypeName(order.truck_type)}</span>
-                <span>📅 ${formatDate(order.created_at)}</span>
-                ${order.delivery_date ? `<span>📦 Доставка: ${order.delivery_date}</span>` : ''}
-                ${order.max_price ? `<span>💰 Желаемая цена: ${formatPrice(order.max_price)}</span>` : ''}
-                ${order.total_bids ? `<span>💼 ${order.total_bids} предложений</span>` : ''}
+                <span>${getTruckTypeName(order.truck_type)}</span>
+                <span>${formatDate(order.created_at)}</span>
+                ${order.delivery_date ? `<span>Доставка: ${order.delivery_date}</span>` : ''}
+                ${order.max_price ? `<span>Цена: ${formatPrice(order.max_price)}</span>` : ''}
+                ${order.total_bids ? `<span>${order.total_bids} предложений</span>` : ''}
             </div>
             
             ${tabId === 'closed' && order.cancellation_reason ? `

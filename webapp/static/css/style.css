@@ -1,10 +1,20 @@
 :root {
-    --tg-theme-bg-color: #000000;
-    --tg-theme-text-color: #ffffff;
+    --tg-theme-bg-color: #ffffff;
+    --tg-theme-text-color: #000000;
     --tg-theme-hint-color: #8e8e93;
     --tg-theme-link-color: #0a84ff;
     --tg-theme-button-color: #0a84ff;
     --tg-theme-button-text-color: #ffffff;
+    --tg-theme-secondary-bg-color: #f5f5f7;
+    --card-bg: #ffffff;
+    --separator-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Dark theme */
+body.theme-dark {
+    --tg-theme-bg-color: #000000;
+    --tg-theme-text-color: #ffffff;
+    --tg-theme-hint-color: #8e8e93;
     --tg-theme-secondary-bg-color: #1c1c1e;
     --card-bg: #1c1c1e;
     --separator-color: rgba(255, 255, 255, 0.1);
@@ -18,7 +28,7 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background: #000000;
+    background: var(--tg-theme-bg-color);
     color: var(--tg-theme-text-color);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
@@ -47,8 +57,13 @@ body {
 
 .logo {
     font-size: 64px;
+    font-weight: 900;
     margin-bottom: 20px;
-    animation: bounce 2s infinite;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -2px;
 }
 
 @keyframes bounce {
@@ -84,6 +99,12 @@ body {
 
 .logo-section .logo {
     font-size: 80px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -3px;
 }
 
 .logo-section h1 {
@@ -256,7 +277,7 @@ body {
 
 /* === NAV MENU === */
 .nav-menu {
-    background: #000000;
+    background: var(--tg-theme-bg-color);
     padding: 8px 0;
 }
 
@@ -318,7 +339,7 @@ body {
 
 /* === PROFILE SCREEN === */
 #profile-screen {
-    background: #000000;
+    background: var(--tg-theme-bg-color);
 }
 
 .profile-header {
@@ -454,7 +475,7 @@ body {
 /* === REVIEWS SECTION === */
 .reviews-section {
     padding: 24px 16px;
-    background: #000000;
+    background: var(--tg-theme-bg-color);
 }
 
 .reviews-section h3 {
