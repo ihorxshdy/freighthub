@@ -3,94 +3,45 @@ const tg = window.Telegram?.WebApp;
 
 // Применение темы Telegram
 function applyTelegramTheme() {
-    console.log('=== Theme Detection Debug ===');
-    console.log('tg exists:', !!tg);
+    let isDark = false;
     
     if (tg) {
-        console.log('tg.colorScheme:', tg.colorScheme);
-        console.log('tg.themeParams:', tg.themeParams);
-        console.log('tg.backgroundColor:', tg.backgroundColor);
+        // Проверяем colorScheme
+        if (tg.colorScheme === 'dark') {
+            isDark = true;
+        }
+        // Проверяем bg_color
+        else if (tg.themeParams?.bg_color) {
+            const color = tg.themeParams.bg_color.replace('#', '');
+            const r = parseInt(color.substr(0, 2), 16);
+            const g = parseInt(color.substr(2, 2), 16);
+            const b = parseInt(color.substr(4, 2), 16);
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            isDark = brightness < 128;
+        }
     }
     
-    let isDarkTheme = false;
-    
-    // Приоритет 1: используем colorScheme если доступен
-    if (tg && tg.colorScheme) {
-        isDarkTheme = tg.colorScheme === 'dark';
-        console.log('Theme from colorScheme:', isDarkTheme ? 'dark' : 'light');
-    }
-    // Приоритет 2: определяем по цвету фона
-    else if (tg && (tg.themeParams?.bg_color || tg.backgroundColor)) {
-        const bgColor = tg.themeParams?.bg_color || tg.backgroundColor;
-        isDarkTheme = isColorDark(bgColor);
-        console.log('Theme from bg_color:', bgColor, '→', isDarkTheme ? 'dark' : 'light');
-    }
-    // Приоритет 3: проверяем системную тему через CSS
-    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        isDarkTheme = true;
-        console.log('Theme from system prefers-color-scheme: dark');
-    }
-    
-    // Применяем тему
-    if (isDarkTheme) {
+    // Применяем класс
+    if (isDark) {
         document.body.classList.add('theme-dark');
-        console.log('✓ Applied theme-dark class to body');
     } else {
         document.body.classList.remove('theme-dark');
-        console.log('✓ Removed theme-dark class from body');
     }
-    
-    console.log('Final body classes:', document.body.className);
-    console.log('============================');
 }
 
-// Определение, является ли цвет темным
-function isColorDark(color) {
-    if (!color) return false;
-    
-    // Убираем # если есть
-    const hex = color.replace('#', '');
-    
-    // Конвертируем в RGB
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-    
-    // Вычисляем яркость (weighted luminance formula)
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-    
-    // Если яркость меньше 128, цвет темный
-    return brightness < 128;
-}
-
-// Применяем тему сразу при загрузке
+// Применяем тему сразу
 applyTelegramTheme();
 
-// Применяем тему после загрузки DOM
-document.addEventListener('DOMContentLoaded', applyTelegramTheme);
-
 if (tg) {
-    try {
-        tg.expand();
-        tg.ready();
-        // Скрываем нижнюю кнопку "Приложение"
-        tg.MainButton.hide();
-        
-        // Применяем тему Telegram
-        applyTelegramTheme();
-        
-        // Слушаем изменения темы
-        if (tg.onEvent) {
-            tg.onEvent('themeChanged', applyTelegramTheme);
-        }
-        
-        // Слушаем изменения системной темы
-        if (window.matchMedia) {
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTelegramTheme);
-        }
-    } catch (e) {
-        console.error('Ошибка инициализации Telegram WebApp:', e);
-    }
+    tg.ready();
+    tg.expand();
+    tg.MainButton.hide();
+    
+    // Применяем тему после ready
+    setTimeout(applyTelegramTheme, 100);
+    
+    // Слушаем события изменения темы
+    tg.onEvent('themeChanged', applyTelegramTheme);
 }
 
 // Базовый путь для API запросов (поддержка вложенных путей)
