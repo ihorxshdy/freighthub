@@ -373,8 +373,17 @@ async function createBid(bidData) {
 }
 
 async function fetchOrderBids(orderId) {
-    const response = await fetchWithTimeout(`${API_BASE}api/orders/${orderId}/bids?telegram_id=${currentUser.telegram_id}`, {}, 10000);
-    return await response.json();
+    try {
+        const response = await fetchWithTimeout(`${API_BASE}api/orders/${orderId}/bids?telegram_id=${currentUser.telegram_id}`, {}, 10000);
+        if (!response.ok) {
+            console.error(`Failed to fetch bids: ${response.status} ${response.statusText}`);
+            return [];
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching bids:', error);
+        return [];
+    }
 }
 
 async function fetchUserRating(telegramId) {
