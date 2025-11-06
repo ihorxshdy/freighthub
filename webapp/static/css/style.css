@@ -296,7 +296,7 @@ body {
 
 .menu-item:active {
     transform: scale(0.97);
-    background: #2c2c2e;
+    opacity: 0.8;
 }
 
 .menu-item.active {
@@ -598,9 +598,7 @@ body {
 }
 
 .empty-icon {
-    font-size: 72px;
-    margin-bottom: 20px;
-    opacity: 0.3;
+    display: none;
 }
 
 .empty-title {

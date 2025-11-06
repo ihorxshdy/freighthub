@@ -582,7 +582,6 @@ function renderReviews(reviews) {
     if (!reviews || reviews.length === 0) {
         reviewsList.innerHTML = `
             <div class="empty-state">
-                <div class="empty-icon">💬</div>
                 <div class="empty-title">Нет отзывов</div>
                 <div class="empty-description">Здесь будут отображаться отзывы после выполнения заказов</div>
             </div>
@@ -710,11 +709,10 @@ async function loadTabData(tabId, forceRefresh = false) {
         console.log('❌ Критическая ошибка загрузки: ' + error.message, 'error');
         tabPane.innerHTML = `
             <div class="empty-state">
-                <div class="empty-icon">⚠️</div>
                 <div class="empty-title">Ошибка загрузки</div>
                 <p style="color: #666; margin: 10px 0;">${error.message || 'Проверьте интернет-соединение'}</p>
                 <button onclick="refreshOrders()" style="margin-top: 15px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                    🔄 Повторить
+                    Повторить
                 </button>
             </div>
         `;
@@ -830,7 +828,6 @@ function renderCustomerOrders(orders, container, tabId) {
     if (!orders || orders.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <div class="empty-icon">●</div>
                 <div class="empty-title">Нет заявок</div>
                 <div class="empty-description">Создайте новую заявку на грузоперевозку</div>
             </div>
@@ -946,7 +943,6 @@ function renderDriverOrders(orders, container, tabId) {
     if (!orders || orders.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <div class="empty-icon">●</div>
                 <div class="empty-title">Нет заявок</div>
                 <div class="empty-description">${getEmptyMessage(tabId)}</div>
             </div>
@@ -1303,7 +1299,6 @@ window.viewOrderBids = async function(orderId) {
         if (bids.length === 0) {
             bidsList.innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-icon">💰</div>
                     <div class="empty-title">Нет предложений</div>
                 </div>
             `;
@@ -1362,7 +1357,6 @@ window.viewAndSelectBids = async function(orderId) {
         if (bids.length === 0) {
             bidsList.innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-icon">💰</div>
                     <div class="empty-title">Нет предложений</div>
                     <div class="empty-description">Предложения от водителей не поступили</div>
                 </div>
