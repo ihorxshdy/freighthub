@@ -722,10 +722,17 @@ def cancel_order(order_id):
     if is_driver:
         # Если отменяет водитель - возвращаем в auction_completed, чтобы заказчик мог выбрать другого исполнителя
         new_status = 'auction_completed'
-        # Обнуляем winner_driver_id, чтобы заказчик мог выбрать нового исполнителя
+        # Обнуляем winner_driver_id и все связанные поля, чтобы заказчик мог выбрать нового исполнителя
         conn.execute(
             '''UPDATE orders 
-               SET status = ?, winner_driver_id = NULL, cancelled_by = ?, cancelled_at = CURRENT_TIMESTAMP, cancellation_reason = ?
+               SET status = ?, 
+                   winner_driver_id = NULL, 
+                   winning_price = NULL,
+                   customer_confirmed = 0,
+                   driver_confirmed = 0,
+                   cancelled_by = ?, 
+                   cancelled_at = CURRENT_TIMESTAMP, 
+                   cancellation_reason = ?
                WHERE id = ?''',
             (new_status, cancelled_by_user_id, cancellation_reason, order_id)
         )
