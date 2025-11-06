@@ -1012,6 +1012,9 @@ function renderDriverOrders(orders, container, tabId) {
                                 <span class="slide-text">✓ Ожидание подтверждения заказчиком</span>
                             </div>
                         </div>
+                        <button class="btn btn-small btn-danger" onclick="cancelOrder(${order.id})" style="width: 100%; margin-top: 10px;">
+                            Отменить заказ
+                        </button>
                     ` : `
                         <div class="slide-to-confirm" id="slide-confirm-driver-${order.id}" data-order-id="${order.id}" data-role="driver">
                             <div class="slide-track">
@@ -1021,6 +1024,9 @@ function renderDriverOrders(orders, container, tabId) {
                                 <span class="slide-icon">→</span>
                             </div>
                         </div>
+                        <button class="btn btn-small btn-danger" onclick="cancelOrder(${order.id})" style="width: 100%; margin-top: 10px;">
+                            Отменить заказ
+                        </button>
                     `}
                 </div>
             ` : ''}

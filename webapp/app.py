@@ -711,13 +711,27 @@ def cancel_order(order_id):
     # Получаем user_id отменяющего
     cancelled_by_user_id = order['customer_user_id'] if is_customer else order['driver_user_id']
     
-    # Отменяем заказ с сохранением причины
-    conn.execute(
-        '''UPDATE orders 
-           SET status = ?, cancelled_by = ?, cancelled_at = CURRENT_TIMESTAMP, cancellation_reason = ?
-           WHERE id = ?''',
-        ('closed', cancelled_by_user_id, cancellation_reason, order_id)
-    )
+    # Определяем новый статус в зависимости от того, кто отменяет
+    if is_driver:
+        # Если отменяет водитель - возвращаем в auction_completed, чтобы заказчик мог выбрать другого исполнителя
+        new_status = 'auction_completed'
+        # Обнуляем winner_driver_id, чтобы заказчик мог выбрать нового исполнителя
+        conn.execute(
+            '''UPDATE orders 
+               SET status = ?, winner_driver_id = NULL, cancelled_by = ?, cancelled_at = CURRENT_TIMESTAMP, cancellation_reason = ?
+               WHERE id = ?''',
+            (new_status, cancelled_by_user_id, cancellation_reason, order_id)
+        )
+    else:
+        # Если отменяет заказчик - закрываем заказ
+        new_status = 'closed'
+        conn.execute(
+            '''UPDATE orders 
+               SET status = ?, cancelled_by = ?, cancelled_at = CURRENT_TIMESTAMP, cancellation_reason = ?
+               WHERE id = ?''',
+            (new_status, cancelled_by_user_id, cancellation_reason, order_id)
+        )
+    
     conn.commit()
     conn.close()
     
@@ -738,7 +752,7 @@ def cancel_order(order_id):
     return jsonify({
         'success': True,
         'message': 'Order cancelled',
-        'status': 'closed',
+        'status': new_status,
         'cancelled_by': 'customer' if is_customer else 'driver'
     })
 
