@@ -393,9 +393,9 @@ def get_driver_orders():
     
     conn = get_db_connection()
     
-    # Получаем ID пользователя
+    # Получаем ID пользователя и тип машины
     user = conn.execute(
-        'SELECT id FROM users WHERE telegram_id = ?',
+        'SELECT id, truck_type FROM users WHERE telegram_id = ?',
         (telegram_id,)
     ).fetchone()
     
@@ -412,6 +412,7 @@ def get_driver_orders():
     }
     
     # Получаем открытые заявки (без предложений от этого водителя)
+    # Фильтруем по типу машины водителя
     open_orders = conn.execute(
         '''SELECT o.*, 
                   COUNT(DISTINCT b.id) as bids_count,
@@ -419,13 +420,14 @@ def get_driver_orders():
            FROM orders o
            LEFT JOIN bids b ON o.id = b.order_id
            WHERE o.status = 'active'
+             AND o.truck_type = ?
              AND o.id NOT IN (
                  SELECT order_id FROM bids WHERE driver_id = ?
              )
            GROUP BY o.id
            ORDER BY o.created_at DESC
            LIMIT 50''',
-        (user['id'],)
+        (user['truck_type'], user['id'])
     ).fetchall()
     
     # Заявки с предложениями от водителя (подбор еще идет)
