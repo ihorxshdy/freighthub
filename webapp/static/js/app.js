@@ -763,27 +763,27 @@ function renderDriverOrders(orders, container, tabId) {
                         Сделать предложение
                     </button>
                 ` : ''}
-                ${tabId === 'in_progress' ? `
-                    <div style="margin-top: 10px;">
-                        ${(order.driver_confirmed === 1 || order.driver_confirmed === true) ? `
-                            <div class="slide-to-confirm confirmed">
-                                <div class="slide-track">
-                                    <span class="slide-text">✓ Ожидание подтверждения заказчиком</span>
-                                </div>
-                            </div>
-                        ` : `
-                            <div class="slide-to-confirm" id="slide-confirm-driver-${order.id}" data-order-id="${order.id}" data-role="driver">
-                                <div class="slide-track">
-                                    <span class="slide-text">Проведите для подтверждения</span>
-                                </div>
-                                <div class="slide-button">
-                                    <span class="slide-icon">→</span>
-                                </div>
-                            </div>
-                        `}
-                    </div>
-                ` : ''}
             </div>
+            ${tabId === 'in_progress' ? `
+                <div style="margin-top: 10px; padding: 0 16px;">
+                    ${(order.driver_confirmed === 1 || order.driver_confirmed === true) ? `
+                        <div class="slide-to-confirm confirmed">
+                            <div class="slide-track">
+                                <span class="slide-text">✓ Ожидание подтверждения заказчиком</span>
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="slide-to-confirm" id="slide-confirm-driver-${order.id}" data-order-id="${order.id}" data-role="driver">
+                            <div class="slide-track">
+                                <span class="slide-text">Проведите для подтверждения</span>
+                            </div>
+                            <div class="slide-button">
+                                <span class="slide-icon">→</span>
+                            </div>
+                        </div>
+                    `}
+                </div>
+            ` : ''}
         </div>
     `).join('');
     
