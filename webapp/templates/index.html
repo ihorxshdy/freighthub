@@ -53,23 +53,25 @@
 
         <!-- Главный экран приложения -->
         <div id="main-screen" class="screen hidden">
-            <!-- Заголовок -->
-            <header class="header">
-                <div class="user-info">
-                    <div class="user-avatar" id="user-avatar">👤</div>
-                    <div class="user-details">
-                        <div class="user-name" id="user-name">Пользователь</div>
-                        <div class="user-role" id="user-role">Заказчик</div>
+            <!-- Профиль пользователя -->
+            <div class="profile-card" id="profile-card" onclick="openProfile()">
+                <div class="profile-avatar" id="user-avatar">👤</div>
+                <div class="profile-info">
+                    <div class="profile-name" id="user-name">Пользователь</div>
+                    <div class="profile-phone" id="user-phone">+7 (000) 000-00-00</div>
+                    <div class="profile-rating" id="user-rating">
+                        <span class="rating-stars">★★★★★</span>
+                        <span class="rating-value">0.0</span>
                     </div>
                 </div>
-                <button class="admin-contact-btn" onclick="contactAdmin()">
-                    Сообщить<br>об ошибке
+                <button class="admin-contact-btn" onclick="contactAdmin(); event.stopPropagation();">
+                    ⚠️
                 </button>
-            </header>
+            </div>
 
-            <!-- Вкладки навигации -->
-            <nav class="tabs" id="tabs-nav">
-                <!-- Вкладки добавляются динамически в зависимости от роли -->
+            <!-- Навигационное меню -->
+            <nav class="nav-menu" id="nav-menu">
+                <!-- Пункты меню добавляются динамически -->
             </nav>
 
             <!-- Контент вкладок -->
@@ -81,6 +83,46 @@
             <button class="fab" id="create-order-btn">
                 <span class="fab-icon">+</span>
             </button>
+        </div>
+        
+        <!-- Экран профиля пользователя -->
+        <div id="profile-screen" class="screen hidden">
+            <div class="profile-header">
+                <button class="back-btn" onclick="closeProfile()">← Назад</button>
+                <h2>Профиль</h2>
+            </div>
+            
+            <div class="profile-details-card">
+                <div class="profile-avatar-large" id="profile-avatar-large">👤</div>
+                <div class="profile-name-large" id="profile-name-large">Пользователь</div>
+                <div class="profile-phone-large" id="profile-phone-large">+7 (000) 000-00-00</div>
+                <div class="profile-role-large" id="profile-role-large">Заказчик</div>
+                
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-orders">0</div>
+                        <div class="stat-label">Заказов</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-rating">
+                            <span class="rating-stars-large">★★★★★</span>
+                            <span id="stat-rating-value">0.0</span>
+                        </div>
+                        <div class="stat-label">Рейтинг</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-reviews">0</div>
+                        <div class="stat-label">Отзывов</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="reviews-section">
+                <h3>Отзывы</h3>
+                <div id="reviews-list">
+                    <!-- Список отзывов -->
+                </div>
+            </div>
         </div>
 
         <!-- Модальное окно создания заявки -->
@@ -206,6 +248,50 @@
                         <div class="modal-actions">
                             <button type="button" class="btn btn-secondary" id="cancel-cancellation">Отмена</button>
                             <button type="submit" class="btn btn-danger">Подтвердить отмену</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Модальное окно оценки заказа -->
+        <div id="review-modal" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Оценить выполнение</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="review-user-info">
+                        <div class="review-avatar" id="review-avatar">👤</div>
+                        <div class="review-user-name" id="review-user-name">Пользователь</div>
+                    </div>
+                    
+                    <form id="review-form">
+                        <input type="hidden" id="review-order-id">
+                        <input type="hidden" id="review-user-id">
+                        
+                        <div class="form-group">
+                            <label>Ваша оценка</label>
+                            <div class="rating-input" id="rating-input">
+                                <span class="rating-star" data-rating="1">★</span>
+                                <span class="rating-star" data-rating="2">★</span>
+                                <span class="rating-star" data-rating="3">★</span>
+                                <span class="rating-star" data-rating="4">★</span>
+                                <span class="rating-star" data-rating="5">★</span>
+                            </div>
+                            <input type="hidden" id="rating-value" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Комментарий (необязательно)</label>
+                            <textarea id="review-comment" rows="4" placeholder="Поделитесь своим опытом работы"></textarea>
+                        </div>
+
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary" id="cancel-review">Отмена</button>
+                            <button type="submit" class="btn btn-primary">Оставить отзыв</button>
                         </div>
                     </form>
                 </div>

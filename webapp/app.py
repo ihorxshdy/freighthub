@@ -184,20 +184,21 @@ def get_customer_orders():
         '''SELECT o.*, 
                   COUNT(DISTINCT b.id) as bids_count,
                   MIN(b.price) as min_bid_price,
-                  winner.name as winner_name,
+                  winner.name as driver_name,
                   winner.phone_number as winner_phone,
                   winner.telegram_id as winner_telegram_id,
                   o.customer_confirmed,
                   o.driver_confirmed,
                   o.cancelled_by,
-                  o.cancellation_reason
+                  o.cancellation_reason,
+                  (SELECT COUNT(*) FROM reviews WHERE order_id = o.id AND reviewer_id = ?) as customer_reviewed
            FROM orders o
            LEFT JOIN bids b ON o.id = b.order_id
            LEFT JOIN users winner ON o.winner_driver_id = winner.id
            WHERE o.customer_id = ?
            GROUP BY o.id
            ORDER BY o.created_at DESC''',
-        (user['id'],)
+        (user['id'], user['id'])
     ).fetchall()
     
     conn.close()
@@ -466,17 +467,20 @@ def get_driver_orders():
     # Закрытые заявки
     closed_orders = conn.execute(
         '''SELECT o.*, b.price as my_bid_price,
+                  u.name as customer_name,
                   o.customer_confirmed,
                   o.driver_confirmed,
                   o.cancelled_by,
-                  o.cancellation_reason
+                  o.cancellation_reason,
+                  (SELECT COUNT(*) FROM reviews WHERE order_id = o.id AND reviewer_id = ?) as driver_reviewed
            FROM orders o
            LEFT JOIN bids b ON o.id = b.order_id AND b.driver_id = ?
+           LEFT JOIN users u ON o.customer_id = u.id
            WHERE o.status = 'closed'
              AND b.id IS NOT NULL
            ORDER BY o.created_at DESC
            LIMIT 20''',
-        (user['id'],)
+        (user['id'], user['id'])
     ).fetchall()
     
     conn.close()
@@ -870,6 +874,168 @@ def debug_db_info():
             'error': str(e),
             'database_path': DATABASE_PATH
         }), 500
+
+@app.route('/api/user/<int:telegram_id>/rating', methods=['GET'])
+def get_user_rating(telegram_id):
+    """Получение рейтинга пользователя"""
+    conn = get_db_connection()
+    
+    # Находим пользователя
+    user = conn.execute('SELECT id FROM users WHERE telegram_id = ?', (telegram_id,)).fetchone()
+    
+    if not user:
+        conn.close()
+        return jsonify({'error': 'User not found'}), 404
+    
+    # Получаем средний рейтинг и количество отзывов
+    rating_data = conn.execute(
+        '''SELECT AVG(rating) as average, COUNT(*) as count
+           FROM reviews
+           WHERE reviewee_id = ?''',
+        (user['id'],)
+    ).fetchone()
+    
+    conn.close()
+    
+    return jsonify({
+        'average': round(rating_data['average'], 1) if rating_data['average'] else 0,
+        'count': rating_data['count']
+    })
+
+@app.route('/api/user/<int:telegram_id>/stats', methods=['GET'])
+def get_user_stats(telegram_id):
+    """Получение статистики пользователя"""
+    conn = get_db_connection()
+    
+    # Находим пользователя
+    user = conn.execute('SELECT id, role FROM users WHERE telegram_id = ?', (telegram_id,)).fetchone()
+    
+    if not user:
+        conn.close()
+        return jsonify({'error': 'User not found'}), 404
+    
+    # Считаем заказы в зависимости от роли
+    if user['role'] == 'customer':
+        total_orders = conn.execute(
+            'SELECT COUNT(*) as count FROM orders WHERE customer_id = ?',
+            (user['id'],)
+        ).fetchone()['count']
+    else:
+        total_orders = conn.execute(
+            'SELECT COUNT(*) as count FROM orders WHERE winner_driver_id = ? AND status = "completed"',
+            (user['id'],)
+        ).fetchone()['count']
+    
+    conn.close()
+    
+    return jsonify({
+        'total_orders': total_orders
+    })
+
+@app.route('/api/user/<int:telegram_id>/reviews', methods=['GET'])
+def get_user_reviews(telegram_id):
+    """Получение отзывов о пользователе"""
+    conn = get_db_connection()
+    
+    # Находим пользователя
+    user = conn.execute('SELECT id FROM users WHERE telegram_id = ?', (telegram_id,)).fetchone()
+    
+    if not user:
+        conn.close()
+        return jsonify({'error': 'User not found'}), 404
+    
+    # Получаем отзывы
+    reviews = conn.execute(
+        '''SELECT r.*, u.name as reviewer_name, u.telegram_id as reviewer_telegram_id
+           FROM reviews r
+           JOIN users u ON r.reviewer_id = u.id
+           WHERE r.reviewee_id = ?
+           ORDER BY r.created_at DESC''',
+        (user['id'],)
+    ).fetchall()
+    
+    conn.close()
+    
+    return jsonify([dict_from_row(r) for r in reviews])
+
+@app.route('/api/reviews', methods=['POST'])
+def create_review():
+    """Создание отзыва"""
+    telegram_id = request.args.get('telegram_id')
+    data = request.get_json()
+    
+    if not telegram_id:
+        return jsonify({'error': 'telegram_id required'}), 400
+    
+    order_id = data.get('order_id')
+    reviewee_id = data.get('reviewee_id')
+    rating = data.get('rating')
+    comment = data.get('comment', '')
+    
+    if not all([order_id, reviewee_id, rating]):
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    if not (1 <= rating <= 5):
+        return jsonify({'error': 'Rating must be between 1 and 5'}), 400
+    
+    conn = get_db_connection()
+    
+    # Находим пользователя
+    reviewer = conn.execute('SELECT id FROM users WHERE telegram_id = ?', (telegram_id,)).fetchone()
+    
+    if not reviewer:
+        conn.close()
+        return jsonify({'error': 'User not found'}), 404
+    
+    # Проверяем существование заказа и участие пользователя
+    order = conn.execute(
+        '''SELECT customer_id, winner_driver_id, status
+           FROM orders
+           WHERE id = ?''',
+        (order_id,)
+    ).fetchone()
+    
+    if not order:
+        conn.close()
+        return jsonify({'error': 'Order not found'}), 404
+    
+    if order['status'] != 'completed':
+        conn.close()
+        return jsonify({'error': 'Order must be completed to leave a review'}), 400
+    
+    # Проверяем, что пользователь участвовал в заказе
+    if reviewer['id'] not in [order['customer_id'], order['winner_driver_id']]:
+        conn.close()
+        return jsonify({'error': 'You are not part of this order'}), 403
+    
+    # Проверяем, что отзыв оставляется на другого участника
+    if reviewer['id'] == reviewee_id:
+        conn.close()
+        return jsonify({'error': 'Cannot review yourself'}), 400
+    
+    try:
+        # Создаём отзыв
+        conn.execute(
+            '''INSERT INTO reviews (order_id, reviewer_id, reviewee_id, rating, comment)
+               VALUES (?, ?, ?, ?, ?)''',
+            (order_id, reviewer['id'], reviewee_id, rating, comment)
+        )
+        conn.commit()
+        
+        review_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+        
+        # Получаем созданный отзыв
+        review = conn.execute(
+            'SELECT * FROM reviews WHERE id = ?',
+            (review_id,)
+        ).fetchone()
+        
+        conn.close()
+        
+        return jsonify(dict_from_row(review)), 201
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({'error': 'You have already reviewed this user for this order'}), 409
 
 
 if __name__ == '__main__':

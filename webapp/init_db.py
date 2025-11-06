@@ -103,6 +103,23 @@ def init_database():
         )
     """)
     
+    # Таблица отзывов
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS reviews (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id INTEGER NOT NULL,
+            reviewer_id INTEGER NOT NULL,
+            reviewee_id INTEGER NOT NULL,
+            rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+            comment TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (order_id) REFERENCES orders (id),
+            FOREIGN KEY (reviewer_id) REFERENCES users (id),
+            FOREIGN KEY (reviewee_id) REFERENCES users (id),
+            UNIQUE(order_id, reviewer_id, reviewee_id)
+        )
+    """)
+    
     conn.commit()
     conn.close()
     print(f"База данных создана: {DATABASE_PATH}")

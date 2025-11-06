@@ -334,6 +334,58 @@ async function fetchOrderBids(orderId) {
     return await response.json();
 }
 
+async function fetchUserRating(telegramId) {
+    try {
+        const response = await fetchWithTimeout(`${API_BASE}api/user/${telegramId}/rating`, {}, 10000);
+        if (!response.ok) return { average: 0, count: 0 };
+        return await response.json();
+    } catch (error) {
+        console.error('Ошибка загрузки рейтинга:', error);
+        return { average: 0, count: 0 };
+    }
+}
+
+async function fetchUserStats(telegramId) {
+    try {
+        const response = await fetchWithTimeout(`${API_BASE}api/user/${telegramId}/stats`, {}, 10000);
+        if (!response.ok) return { total_orders: 0 };
+        return await response.json();
+    } catch (error) {
+        console.error('Ошибка загрузки статистики:', error);
+        return { total_orders: 0 };
+    }
+}
+
+async function fetchUserReviews(telegramId) {
+    try {
+        const response = await fetchWithTimeout(`${API_BASE}api/user/${telegramId}/reviews`, {}, 10000);
+        if (!response.ok) return [];
+        return await response.json();
+    } catch (error) {
+        console.error('Ошибка загрузки отзывов:', error);
+        return [];
+    }
+}
+
+async function submitReview(orderId, revieweeId, rating, comment) {
+    const response = await fetchWithTimeout(`${API_BASE}api/reviews?telegram_id=${currentUser.telegram_id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            order_id: orderId,
+            reviewee_id: revieweeId,
+            rating: rating,
+            comment: comment
+        })
+    }, 15000);
+    
+    if (!response.ok) {
+        throw new Error('Ошибка отправки отзыва');
+    }
+    
+    return await response.json();
+}
+
 // === НАВИГАЦИЯ ===
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
@@ -351,13 +403,16 @@ async function showMainScreen() {
     // Загружаем типы грузовиков ДО отображения профиля
     await loadTruckTypes();
     
-    // Обновляем информацию о пользователе
+    // Загружаем рейтинг пользователя
+    const rating = await fetchUserRating(currentUser.telegram_id);
+    
+    // Обновляем информацию о пользователе в профиле
     document.getElementById('user-name').textContent = currentUser.name || 'Пользователь';
-    const roleText = currentUser.role === 'customer' ? 'Заказчик' : 'Водитель';
-    const phoneText = currentUser.phone_number ? ` • ${currentUser.phone_number}` : '';
-    // Для водителей добавляем тип машины
-    const truckText = (currentUser.role === 'driver' && currentUser.truck_type) ? ` • ${getTruckTypeName(currentUser.truck_type)}` : '';
-    document.getElementById('user-role').textContent = roleText + phoneText + truckText;
+    document.getElementById('user-phone').textContent = formatPhoneNumber(currentUser.phone_number);
+    
+    // Отображаем рейтинг
+    updateRatingDisplay(rating);
+    
     document.body.className = `role-${currentUser.role}`;
     
     // Устанавливаем аватар из Telegram
@@ -374,8 +429,8 @@ async function showMainScreen() {
         avatar.textContent = initial;
     }
     
-    // Инициализируем вкладки
-    initTabs();
+    // Инициализируем меню навигации
+    initNavMenu();
     
     // Инициализируем модальные окна
     initModals();
@@ -392,56 +447,177 @@ async function showMainScreen() {
     }, CACHE_DURATION);
 }
 
-function initTabs() {
-    const tabsNav = document.getElementById('tabs-nav');
+// Функция для форматирования номера телефона
+function formatPhoneNumber(phone) {
+    if (!phone) return '+7 (000) 000-00-00';
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 11 && cleaned[0] === '7') {
+        return `+7 (${cleaned.slice(1,4)}) ${cleaned.slice(4,7)}-${cleaned.slice(7,9)}-${cleaned.slice(9)}`;
+    }
+    return phone;
+}
+
+// Обновление отображения рейтинга
+function updateRatingDisplay(rating) {
+    const avgRating = rating.average || 0;
+    const count = rating.count || 0;
+    
+    // Обновляем в карточке профиля
+    document.getElementById('user-rating').innerHTML = `
+        <span class="rating-stars">${getStarsHTML(avgRating)}</span>
+        <span class="rating-value">${avgRating.toFixed(1)} (${count})</span>
+    `;
+}
+
+// Генерация HTML для звёзд рейтинга
+function getStarsHTML(rating) {
+    const fullStars = Math.floor(rating);
+    const halfStar = rating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
+    
+    let html = '';
+    for (let i = 0; i < fullStars; i++) html += '★';
+    if (halfStar) html += '☆';
+    for (let i = 0; i < emptyStars; i++) html += '☆';
+    
+    return html;
+}
+
+// Открытие профиля
+async function openProfile() {
+    await loadProfileData(currentUser.telegram_id);
+    showScreen('profile-screen');
+}
+
+// Закрытие профиля
+function closeProfile() {
+    showScreen('main-screen');
+}
+
+// Загрузка данных профиля
+async function loadProfileData(telegramId) {
+    try {
+        const [rating, stats, reviews] = await Promise.all([
+            fetchUserRating(telegramId),
+            fetchUserStats(telegramId),
+            fetchUserReviews(telegramId)
+        ]);
+        
+        // Обновляем данные профиля
+        const telegramUser = getTelegramUser();
+        const avatarLarge = document.getElementById('profile-avatar-large');
+        
+        if (telegramUser && telegramUser.photo_url) {
+            avatarLarge.style.backgroundImage = `url(${telegramUser.photo_url})`;
+            avatarLarge.style.backgroundSize = 'cover';
+            avatarLarge.style.backgroundPosition = 'center';
+            avatarLarge.textContent = '';
+        } else {
+            const initial = (currentUser.name || 'П').charAt(0).toUpperCase();
+            avatarLarge.textContent = initial;
+        }
+        
+        document.getElementById('profile-name-large').textContent = currentUser.name || 'Пользователь';
+        document.getElementById('profile-phone-large').textContent = formatPhoneNumber(currentUser.phone_number);
+        document.getElementById('profile-role-large').textContent = currentUser.role === 'customer' ? 'Заказчик' : 'Водитель';
+        
+        // Статистика
+        document.getElementById('stat-orders').textContent = stats.total_orders || 0;
+        document.getElementById('stat-rating-value').textContent = (rating.average || 0).toFixed(1);
+        document.getElementById('stat-reviews').textContent = rating.count || 0;
+        
+        // Отзывы
+        renderReviews(reviews);
+    } catch (error) {
+        console.error('Ошибка загрузки профиля:', error);
+        showError('Не удалось загрузить данные профиля');
+    }
+}
+
+// Отрисовка отзывов
+function renderReviews(reviews) {
+    const reviewsList = document.getElementById('reviews-list');
+    
+    if (!reviews || reviews.length === 0) {
+        reviewsList.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">💬</div>
+                <div class="empty-title">Нет отзывов</div>
+                <div class="empty-description">Здесь будут отображаться отзывы после выполнения заказов</div>
+            </div>
+        `;
+        return;
+    }
+    
+    reviewsList.innerHTML = reviews.map(review => `
+        <div class="review-card">
+            <div class="review-header">
+                <div class="review-author">${review.reviewer_name}</div>
+                <div class="review-rating">${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}</div>
+            </div>
+            <div class="review-date">${formatLocalDateTime(review.created_at)}</div>
+            ${review.comment ? `<div class="review-comment">${review.comment}</div>` : ''}
+            <div class="review-order">Заказ #${review.order_id}</div>
+        </div>
+    `).join('');
+}
+
+function initNavMenu() {
+    const navMenu = document.getElementById('nav-menu');
     const tabContent = document.getElementById('tab-content');
     
-    tabsNav.innerHTML = '';
+    navMenu.innerHTML = '';
     tabContent.innerHTML = '';
     
-    let tabs = [];
+    let menuItems = [];
     
     if (currentUser.role === 'customer') {
-        tabs = [
-            { id: 'searching', label: 'Поиск исполнителей', icon: '' },
-            { id: 'created', label: 'Созданные', icon: '' },
-            { id: 'in_progress', label: 'В процессе', icon: '' },
-            { id: 'closed', label: 'Закрытые', icon: '' }
+        menuItems = [
+            { id: 'searching', label: 'Поиск исполнителей', icon: '🔍' },
+            { id: 'created', label: 'Созданные заявки', icon: '📝' },
+            { id: 'in_progress', label: 'В процессе', icon: '🚚' },
+            { id: 'closed', label: 'Закрытые', icon: '✅' }
         ];
     } else {
-        tabs = [
-            { id: 'open', label: 'Открытые заявки', icon: '' },
-            { id: 'my_bids', label: 'Мои предложения', icon: '' },
-            { id: 'in_progress', label: 'В процессе', icon: '' },
-            { id: 'closed', label: 'Закрытые', icon: '' }
+        menuItems = [
+            { id: 'open', label: 'Открытые заявки', icon: '📦' },
+            { id: 'my_bids', label: 'Мои предложения', icon: '💰' },
+            { id: 'in_progress', label: 'В процессе', icon: '🚛' },
+            { id: 'closed', label: 'Завершённые', icon: '✅' }
         ];
     }
     
-    tabs.forEach((tab, index) => {
-        // Создаем кнопку вкладки
-        const tabBtn = document.createElement('button');
-        tabBtn.className = 'tab' + (index === 0 ? ' active' : '');
-        tabBtn.dataset.tab = tab.id;
-        tabBtn.innerHTML = `${tab.icon} ${tab.label} <span class="tab-badge" id="badge-${tab.id}">0</span>`;
-        tabBtn.addEventListener('click', () => switchTab(tab.id));
-        tabsNav.appendChild(tabBtn);
+    menuItems.forEach((item, index) => {
+        // Создаем пункт меню
+        const menuItem = document.createElement('div');
+        menuItem.className = 'menu-item' + (index === 0 ? ' active' : '');
+        menuItem.dataset.tab = item.id;
+        menuItem.innerHTML = `
+            <div class="menu-item-content">
+                <div class="menu-icon">${item.icon}</div>
+                <div class="menu-label">${item.label}</div>
+            </div>
+            <span class="menu-badge" id="badge-${item.id}">0</span>
+        `;
+        menuItem.addEventListener('click', () => switchTab(item.id));
+        navMenu.appendChild(menuItem);
         
         // Создаем контент вкладки
         const tabPane = document.createElement('div');
         tabPane.className = 'tab-pane' + (index === 0 ? ' active' : '');
-        tabPane.id = `tab-${tab.id}`;
+        tabPane.id = `tab-${item.id}`;
         tabContent.appendChild(tabPane);
     });
     
     // Загружаем данные для первой вкладки
-    currentTab = tabs[0].id;
+    currentTab = menuItems[0].id;
     loadTabData(currentTab);
 }
 
 async function switchTab(tabId) {
-    // Обновляем активную вкладку
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.classList.toggle('active', tab.dataset.tab === tabId);
+    // Обновляем активный пункт меню
+    document.querySelectorAll('.menu-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.tab === tabId);
     });
     
     document.querySelectorAll('.tab-pane').forEach(pane => {
@@ -654,6 +830,23 @@ function renderCustomerOrders(orders, container, tabId) {
                 </div>
             ` : ''}
             
+            ${tabId === 'closed' && order.status === 'completed' && order.winner_driver_id ? `
+                <div class="order-footer">
+                    <div style="flex: 1;">
+                        <div style="font-size: 14px; color: #666; margin-bottom: 4px;">Исполнитель:</div>
+                        <div style="font-weight: 600;">${order.driver_name || 'Водитель'}</div>
+                        ${order.winning_price ? `<div style="color: #4CAF50; font-weight: 600; margin-top: 4px;">${formatPrice(order.winning_price)}</div>` : ''}
+                    </div>
+                    ${!order.customer_reviewed ? `
+                        <button class="btn btn-small btn-primary" onclick="openReviewModal(${order.id}, ${order.winner_driver_id}, '${order.driver_name || 'Водитель'}')">
+                            Оценить
+                        </button>
+                    ` : `
+                        <div style="color: #4CAF50; font-size: 12px;">✓ Оценка оставлена</div>
+                    `}
+                </div>
+            ` : ''}
+            
             ${tabId === 'searching' ? `
                 <div class="order-footer">
                     <div class="bids-info">
@@ -751,6 +944,23 @@ function renderDriverOrders(orders, container, tabId) {
             ${tabId === 'closed' && order.cancellation_reason ? `
                 <div class="order-comment">
                     <strong>Причина отмены:</strong> ${order.cancellation_reason}
+                </div>
+            ` : ''}
+            
+            ${tabId === 'closed' && order.status === 'completed' && order.customer_id ? `
+                <div class="order-footer">
+                    <div style="flex: 1;">
+                        <div style="font-size: 14px; color: #666; margin-bottom: 4px;">Заказчик:</div>
+                        <div style="font-weight: 600;">${order.customer_name || 'Заказчик'}</div>
+                        ${order.winning_price ? `<div style="color: #4CAF50; font-weight: 600; margin-top: 4px;">${formatPrice(order.winning_price)}</div>` : ''}
+                    </div>
+                    ${!order.driver_reviewed ? `
+                        <button class="btn btn-small btn-primary" onclick="openReviewModal(${order.id}, ${order.customer_id}, '${order.customer_name || 'Заказчик'}')">
+                            Оценить
+                        </button>
+                    ` : `
+                        <div style="color: #4CAF50; font-size: 12px;">✓ Оценка оставлена</div>
+                    `}
                 </div>
             ` : ''}
             
@@ -919,6 +1129,60 @@ function initModals() {
                 refreshOrders();
             } catch (error) {
                 showError('Ошибка отмены заказа');
+            }
+        });
+    }
+    
+    // Модальное окно отзыва
+    const reviewModal = document.getElementById('review-modal');
+    const reviewForm = document.getElementById('review-form');
+    const cancelReviewBtn = document.getElementById('cancel-review');
+    const ratingStars = document.querySelectorAll('.rating-star');
+    
+    // Обработчики для звёзд рейтинга
+    ratingStars.forEach(star => {
+        star.addEventListener('click', () => {
+            const rating = parseInt(star.dataset.rating);
+            document.getElementById('rating-value').value = rating;
+            
+            ratingStars.forEach(s => {
+                const starRating = parseInt(s.dataset.rating);
+                s.classList.toggle('active', starRating <= rating);
+            });
+        });
+    });
+    
+    if (cancelReviewBtn) {
+        cancelReviewBtn.addEventListener('click', () => {
+            reviewModal.classList.add('hidden');
+            reviewForm.reset();
+            ratingStars.forEach(s => s.classList.remove('active'));
+        });
+    }
+    
+    if (reviewForm) {
+        reviewForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const orderId = parseInt(document.getElementById('review-order-id').value);
+            const revieweeId = parseInt(document.getElementById('review-user-id').value);
+            const rating = parseInt(document.getElementById('rating-value').value);
+            const comment = document.getElementById('review-comment').value;
+            
+            if (!rating) {
+                showError('Пожалуйста, выберите оценку');
+                return;
+            }
+            
+            try {
+                await submitReview(orderId, revieweeId, rating, comment);
+                reviewModal.classList.add('hidden');
+                reviewForm.reset();
+                ratingStars.forEach(s => s.classList.remove('active'));
+                showSuccess('Спасибо за ваш отзыв!');
+                refreshOrders();
+            } catch (error) {
+                showError('Ошибка отправки отзыва');
             }
         });
     }
@@ -1223,4 +1487,20 @@ function contactAdmin() {
         window.open(url, '_blank');
     }
 }
+
+// Открыть модальное окно для оценки пользователя
+function openReviewModal(orderId, userId, userName) {
+    const modal = document.getElementById('review-modal');
+    document.getElementById('review-order-id').value = orderId;
+    document.getElementById('review-user-id').value = userId;
+    document.getElementById('review-user-name').textContent = userName;
+    
+    // Сбросить звёзды
+    document.querySelectorAll('.rating-star').forEach(s => s.classList.remove('active'));
+    document.getElementById('rating-value').value = '';
+    document.getElementById('review-comment').value = '';
+    
+    modal.classList.remove('hidden');
+}
+
 
