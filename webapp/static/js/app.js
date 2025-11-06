@@ -832,7 +832,7 @@ function renderCustomerOrders(orders, container, tabId) {
         <div class="order-card">
             <div class="order-header">
                 <div class="order-number">Заявка #${order.id}</div>
-                <div class="order-status status-${tabId}">${(tabId === 'closed' || tabId === 'in_progress') ? getDetailedStatus(order) : getStatusLabel(tabId)}</div>
+                <div class="order-status status-${tabId}">${(tabId === 'closed' || tabId === 'in_progress' || order.status === 'no_offers') ? getDetailedStatus(order) : getStatusLabel(tabId)}</div>
             </div>
             
             <div class="order-route">
@@ -947,7 +947,7 @@ function renderDriverOrders(orders, container, tabId) {
         <div class="order-card">
             <div class="order-header">
                 <div class="order-number">Заявка #${order.id}</div>
-                <div class="order-status status-${tabId}">${(tabId === 'closed' || tabId === 'in_progress') ? getDetailedStatus(order) : getStatusLabel(tabId)}</div>
+                <div class="order-status status-${tabId}">${(tabId === 'closed' || tabId === 'in_progress' || order.status === 'no_offers') ? getDetailedStatus(order) : getStatusLabel(tabId)}</div>
             </div>
             
             <div class="order-route">
