@@ -765,7 +765,7 @@ function renderDriverOrders(orders, container, tabId) {
                 ` : ''}
                 ${tabId === 'in_progress' ? `
                     <div style="margin-top: 10px;">
-                        ${order.driver_confirmed ? `
+                        ${(order.driver_confirmed === 1 || order.driver_confirmed === true) ? `
                             <div class="slide-to-confirm confirmed">
                                 <div class="slide-track">
                                     <span class="slide-text">✓ Ожидание подтверждения заказчиком</span>
