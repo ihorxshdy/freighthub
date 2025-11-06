@@ -1032,6 +1032,7 @@ body.role-customer .fab {
 .modal-content {
     position: relative;
     background: var(--card-bg);
+    color: var(--tg-theme-text-color);
     border-radius: 20px 20px 0 0;
     width: 100%;
     max-width: 500px;
@@ -1058,6 +1059,7 @@ body.role-customer .fab {
     font-size: 22px;
     font-weight: 700;
     letter-spacing: -0.4px;
+    color: var(--tg-theme-text-color);
 }
 
 .modal-close {
