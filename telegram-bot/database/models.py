@@ -138,12 +138,22 @@ async def get_user_by_id(user_id: int):
                 }
             return None
 
-async def get_all_drivers():
-    """Получить всех водителей"""
+async def get_all_drivers(truck_type: str = None):
+    """
+    Получить всех водителей
+    
+    Args:
+        truck_type: Фильтр по типу машины (опционально)
+    """
     async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute(
-            "SELECT * FROM users WHERE role = 'driver'"
-        ) as cursor:
+        if truck_type:
+            query = "SELECT * FROM users WHERE role = 'driver' AND truck_type = ?"
+            params = (truck_type,)
+        else:
+            query = "SELECT * FROM users WHERE role = 'driver'"
+            params = ()
+            
+        async with db.execute(query, params) as cursor:
             rows = await cursor.fetchall()
             return [{
                 'id': row[0],

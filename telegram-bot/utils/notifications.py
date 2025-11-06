@@ -11,7 +11,7 @@ from typing import Optional
 
 async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, cargo_description: str, delivery_address: str, max_price: Optional[float] = None, pickup_address: Optional[str] = None, pickup_time: Optional[str] = None, delivery_time: Optional[str] = None, delivery_date: Optional[str] = None):
     """
-    Уведомляет всех водителей о новой заявке
+    Уведомляет водителей о новой заявке (только с подходящим типом машины)
     
     Args:
         bot: Экземпляр бота
@@ -25,7 +25,8 @@ async def notify_drivers_new_order(bot: Bot, order_id: int, truck_type: str, car
         delivery_time: Время доставки (может быть None)
         delivery_date: Дата доставки (может быть None)
     """
-    drivers = await get_all_drivers()
+    # Получаем только водителей с подходящим типом машины
+    drivers = await get_all_drivers(truck_type=truck_type)
     truck_name = get_truck_display_name(truck_type)
     
     # Формируем текст сообщения
