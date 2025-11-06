@@ -112,6 +112,32 @@ function formatLocalDate(utcDateString) {
     }
 }
 
+// Функция для отображения звезд рейтинга
+function renderStars(rating) {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+    
+    let stars = '';
+    
+    // Полные звезды
+    for (let i = 0; i < fullStars; i++) {
+        stars += '★';
+    }
+    
+    // Половинка звезды
+    if (hasHalfStar) {
+        stars += '☆';
+    }
+    
+    // Пустые звезды
+    for (let i = 0; i < emptyStars; i++) {
+        stars += '☆';
+    }
+    
+    return stars;
+}
+
 // Получаем данные пользователя из Telegram
 function getTelegramUser() {
     if (!tg || !tg.initDataUnsafe) {
