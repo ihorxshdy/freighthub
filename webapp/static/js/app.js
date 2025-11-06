@@ -1311,11 +1311,14 @@ window.openBidModal = function(orderId, pickup, delivery, description) {
 
 window.viewOrderBids = async function(orderId) {
     try {
+        console.log('Fetching bids for order:', orderId);
         const bids = await fetchOrderBids(orderId);
+        console.log('Bids received:', bids);
+        
         const modal = document.getElementById('view-bids-modal');
         const bidsList = document.getElementById('bids-list');
         
-        if (bids.length === 0) {
+        if (!bids || bids.length === 0) {
             bidsList.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-title">Нет предложений</div>
@@ -1350,6 +1353,7 @@ window.viewOrderBids = async function(orderId) {
         
         modal.classList.remove('hidden');
     } catch (error) {
+        console.error('Error in viewOrderBids:', error);
         showError('Ошибка загрузки предложений');
     }
 };
@@ -1379,11 +1383,14 @@ window.selectWinner = async function(orderId, bidId) {
 
 window.viewAndSelectBids = async function(orderId) {
     try {
+        console.log('Fetching bids for order (select mode):', orderId);
         const bids = await fetchOrderBids(orderId);
+        console.log('Bids received (select mode):', bids);
+        
         const modal = document.getElementById('view-bids-modal');
         const bidsList = document.getElementById('bids-list');
         
-        if (bids.length === 0) {
+        if (!bids || bids.length === 0) {
             bidsList.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-title">Нет предложений</div>
@@ -1423,10 +1430,13 @@ window.viewAndSelectBids = async function(orderId) {
         
         // Обновляем заголовок модального окна
         const modalHeader = modal.querySelector('.modal-header h2');
-        modalHeader.textContent = `Выбор исполнителя (${bids.length} предложений)`;
+        if (modalHeader && bids && bids.length > 0) {
+            modalHeader.textContent = `Выбор исполнителя (${bids.length} предложений)`;
+        }
         
         modal.classList.remove('hidden');
     } catch (error) {
+        console.error('Error in viewAndSelectBids:', error);
         showError('Ошибка загрузки предложений');
     }
 };
