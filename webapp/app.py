@@ -477,6 +477,7 @@ def get_driver_orders():
     closed_orders = conn.execute(
         '''SELECT o.*, b.price as my_bid_price,
                   u.name as customer_name,
+                  u.id as customer_id,
                   o.customer_confirmed,
                   o.driver_confirmed,
                   o.cancelled_by,
@@ -485,7 +486,7 @@ def get_driver_orders():
            FROM orders o
            LEFT JOIN bids b ON o.id = b.order_id AND b.driver_id = ?
            LEFT JOIN users u ON o.customer_id = u.id
-           WHERE o.status = 'closed'
+           WHERE (o.status = 'closed' OR o.status = 'completed')
              AND b.id IS NOT NULL
            ORDER BY o.created_at DESC
            LIMIT 20''',

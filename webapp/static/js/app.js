@@ -903,7 +903,7 @@ function renderCustomerOrders(orders, container, tabId) {
                 </div>
             ` : ''}
             
-            ${tabId === 'closed' && order.status === 'completed' && order.winner_driver_id ? `
+            ${tabId === 'closed' && order.status === 'closed' && order.customer_confirmed && order.driver_confirmed && order.winner_driver_id ? `
                 <div class="order-footer">
                     <div style="flex: 1;">
                         <div style="font-size: 14px; color: #666; margin-bottom: 4px;">Исполнитель:</div>
@@ -911,7 +911,7 @@ function renderCustomerOrders(orders, container, tabId) {
                         ${order.winning_price ? `<div style="color: #4CAF50; font-weight: 600; margin-top: 4px;">${formatPrice(order.winning_price)}</div>` : ''}
                     </div>
                     ${!order.customer_reviewed ? `
-                        <button class="btn btn-small btn-primary" onclick="openReviewModal(${order.id}, ${order.winner_driver_id}, '${order.driver_name || 'Водитель'}')">
+                        <button class="btn btn-small btn-primary" onclick="openReviewModal(${order.id}, ${order.winner_driver_id}, '${(order.driver_name || 'Водитель').replace(/'/g, "\\'")}')">
                             Оценить
                         </button>
                     ` : `
@@ -1019,7 +1019,7 @@ function renderDriverOrders(orders, container, tabId) {
                 </div>
             ` : ''}
             
-            ${tabId === 'closed' && order.status === 'completed' && order.customer_id ? `
+            ${tabId === 'closed' && order.status === 'closed' && order.customer_confirmed && order.driver_confirmed && order.customer_id ? `
                 <div class="order-footer">
                     <div style="flex: 1;">
                         <div style="font-size: 14px; color: #666; margin-bottom: 4px;">Заказчик:</div>
@@ -1027,7 +1027,7 @@ function renderDriverOrders(orders, container, tabId) {
                         ${order.winning_price ? `<div style="color: #4CAF50; font-weight: 600; margin-top: 4px;">${formatPrice(order.winning_price)}</div>` : ''}
                     </div>
                     ${!order.driver_reviewed ? `
-                        <button class="btn btn-small btn-primary" onclick="openReviewModal(${order.id}, ${order.customer_id}, '${order.customer_name || 'Заказчик'}')">
+                        <button class="btn btn-small btn-primary" onclick="openReviewModal(${order.id}, ${order.customer_id}, '${(order.customer_name || 'Заказчик').replace(/'/g, "\\'")}')">
                             Оценить
                         </button>
                     ` : `
