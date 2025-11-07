@@ -1037,7 +1037,7 @@ def create_review():
     
     # Проверяем существование заказа и участие пользователя
     order = conn.execute(
-        '''SELECT customer_id, winner_driver_id, status
+        '''SELECT customer_id, winner_driver_id, status, customer_confirmed, driver_confirmed
            FROM orders
            WHERE id = ?''',
         (order_id,)
@@ -1047,7 +1047,8 @@ def create_review():
         conn.close()
         return jsonify({'error': 'Order not found'}), 404
     
-    if order['status'] != 'completed':
+    # Проверяем, что заказ завершен (обе стороны подтвердили)
+    if not (order['status'] == 'closed' and order['customer_confirmed'] and order['driver_confirmed']):
         conn.close()
         return jsonify({'error': 'Order must be completed to leave a review'}), 400
     
