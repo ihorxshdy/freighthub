@@ -296,6 +296,15 @@ def create_order():
         )
         
         order_id = cursor.lastrowid
+        
+        # Логируем создание заказа
+        from order_logger import log_order_change, ACTION_CREATED
+        log_order_change(
+            conn, order_id, user['id'], ACTION_CREATED,
+            description=f"Заказ создан: {data['description'][:50]}...",
+            new_value=f"truck_type: {data['truck_type_id']}, price: {data.get('price', 0)}"
+        )
+        
         conn.commit()
         conn.close()
         
@@ -1086,6 +1095,82 @@ def create_review():
         conn.close()
         return jsonify({'error': 'You have already reviewed this user for this order'}), 409
 
+
+@app.route('/api/orders/<int:order_id>/history', methods=['GET'])
+def get_order_change_history(order_id):
+    """Получить историю изменений заказа"""
+    from order_logger import get_order_history
+    
+    conn = get_db_connection()
+    
+    try:
+        history = get_order_history(conn, order_id=order_id)
+        conn.close()
+        return jsonify(history)
+    except Exception as e:
+        conn.close()
+        logger.error(f"Error fetching order history: {e}")
+        return jsonify({'error': 'Failed to fetch order history'}), 500
+
+@app.route('/api/history', methods=['GET'])
+def get_all_history():
+    """Получить всю историю изменений с фильтрами"""
+    from order_logger import get_order_history
+    
+    order_id = request.args.get('order_id', type=int)
+    user_id = request.args.get('user_id', type=int)
+    limit = request.args.get('limit', default=100, type=int)
+    
+    conn = get_db_connection()
+    
+    try:
+        history = get_order_history(conn, order_id=order_id, user_id=user_id, limit=limit)
+        conn.close()
+        return jsonify(history)
+    except Exception as e:
+        conn.close()
+        logger.error(f"Error fetching history: {e}")
+        return jsonify({'error': 'Failed to fetch history'}), 500
+
+@app.route('/api/admin/orders/full', methods=['GET'])
+def get_all_orders_with_history():
+    """Получить все заказы с полной историей изменений (админский эндпоинт)"""
+    from order_logger import get_order_history
+    
+    # Проверка авторизации админа (добавьте свою логику)
+    # admin_key = request.headers.get('X-Admin-Key')
+    # if admin_key != os.environ.get('ADMIN_KEY'):
+    #     return jsonify({'error': 'Unauthorized'}), 401
+    
+    conn = get_db_connection()
+    
+    try:
+        # Получаем все заказы
+        orders = conn.execute('''
+            SELECT o.*, 
+                   customer.name as customer_name,
+                   customer.telegram_id as customer_telegram_id,
+                   driver.name as driver_name,
+                   driver.telegram_id as driver_telegram_id
+            FROM orders o
+            LEFT JOIN users customer ON o.customer_id = customer.id
+            LEFT JOIN users driver ON o.winner_driver_id = driver.id
+            ORDER BY o.created_at DESC
+        ''').fetchall()
+        
+        result = []
+        for order in orders:
+            order_dict = dict_from_row(order)
+            # Добавляем историю изменений
+            order_dict['history'] = get_order_history(conn, order_id=order['id'])
+            result.append(order_dict)
+        
+        conn.close()
+        return jsonify(result)
+    except Exception as e:
+        conn.close()
+        logger.error(f"Error fetching all orders with history: {e}")
+        return jsonify({'error': 'Failed to fetch orders'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
