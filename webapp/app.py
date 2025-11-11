@@ -574,9 +574,7 @@ def create_bid():
         user_id=user['id'],
         action=ACTION_BID_ADDED,
         description=f"Добавлена ставка: {data['price']} ₽",
-        new_value=str(data['price']),
-        ip_address=request.remote_addr,
-        user_agent=request.headers.get('User-Agent')
+        new_value=str(data['price'])
     )
     
     conn.close()
