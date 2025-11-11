@@ -565,6 +565,20 @@ def create_bid():
     
     bid_id = cursor.lastrowid
     conn.commit()
+    
+    # Логируем добавление ставки
+    from order_logger import log_order_change, ACTION_BID_ADDED
+    log_order_change(
+        conn=conn,
+        order_id=data['order_id'],
+        user_id=user['id'],
+        action=ACTION_BID_ADDED,
+        description=f"Добавлена ставка: {data['price']} ₽",
+        new_value=str(data['price']),
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent')
+    )
+    
     conn.close()
     
     return jsonify({'id': bid_id, 'message': 'Bid created successfully'})
@@ -635,13 +649,25 @@ def confirm_order_completion(order_id):
         confirmer_role = 'customer'
         other_telegram_id = order['driver_telegram_id']
         other_name = order['driver_name']
+        user_id = order['customer_id']
     else:
         conn.execute('UPDATE orders SET driver_confirmed = TRUE WHERE id = ?', (order_id,))
         confirmer_role = 'driver'
         other_telegram_id = order['customer_telegram_id']
         other_name = order['customer_name']
+        user_id = order['winner_driver_id']
     
     conn.commit()
+    
+    # Логируем подтверждение
+    from order_logger import log_order_change, ACTION_CONFIRMED
+    log_order_change(
+        conn=conn,
+        order_id=order_id,
+        user_id=user_id,
+        action=ACTION_CONFIRMED,
+        description=f"Подтверждение выполнения от {'заказчика' if is_customer else 'водителя'}"
+    )
     
     # Проверяем, подтвердили ли обе стороны
     updated_order = conn.execute(
@@ -655,6 +681,27 @@ def confirm_order_completion(order_id):
         # Обе стороны подтвердили - переводим в closed
         conn.execute('UPDATE orders SET status = ? WHERE id = ?', ('closed', order_id))
         conn.commit()
+        
+        # Логируем завершение заказа
+        from order_logger import log_order_change, ACTION_COMPLETED, ACTION_STATUS_CHANGED
+        log_order_change(
+            conn=conn,
+            order_id=order_id,
+            user_id=user_id,
+            action=ACTION_STATUS_CHANGED,
+            field_name='status',
+            old_value='in_progress',
+            new_value='closed',
+            description='Обе стороны подтвердили выполнение'
+        )
+        log_order_change(
+            conn=conn,
+            order_id=order_id,
+            user_id=user_id,
+            action=ACTION_COMPLETED,
+            description='Заказ успешно завершен'
+        )
+        
         conn.close()
         
         return jsonify({
@@ -764,6 +811,26 @@ def cancel_order(order_id):
         )
     
     conn.commit()
+    
+    # Логируем отмену заказа
+    from order_logger import log_order_change, ACTION_CANCELLED, ACTION_STATUS_CHANGED
+    log_order_change(
+        conn=conn,
+        order_id=order_id,
+        user_id=cancelled_by_user_id,
+        action=ACTION_CANCELLED,
+        description=f"Причина: {cancellation_reason}"
+    )
+    log_order_change(
+        conn=conn,
+        order_id=order_id,
+        user_id=cancelled_by_user_id,
+        action=ACTION_STATUS_CHANGED,
+        field_name='status',
+        old_value='in_progress',
+        new_value=new_status
+    )
+    
     conn.close()
     
     # Отправляем уведомление обеим сторонам
@@ -847,6 +914,26 @@ def select_auction_winner(order_id):
         (bid['driver_id'], bid['price'], order_id)
     )
     conn.commit()
+    
+    # Логируем выбор исполнителя
+    from order_logger import log_order_change, ACTION_WINNER_SELECTED, ACTION_STATUS_CHANGED
+    log_order_change(
+        conn=conn,
+        order_id=order_id,
+        user_id=order['customer_id'],
+        action=ACTION_WINNER_SELECTED,
+        description=f"Выбран исполнитель: {bid['driver_name']} (цена: {bid['price']} ₽)",
+        new_value=str(bid['driver_id'])
+    )
+    log_order_change(
+        conn=conn,
+        order_id=order_id,
+        user_id=order['customer_id'],
+        action=ACTION_STATUS_CHANGED,
+        field_name='status',
+        old_value=order['status'],
+        new_value='in_progress'
+    )
     
     # Получаем данные заказчика
     customer = conn.execute(
