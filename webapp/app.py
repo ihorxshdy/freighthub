@@ -70,8 +70,8 @@ def index():
 
 @app.route('/history')
 def view_history():
-    """Страница просмотра истории изменений заказов (mobile-friendly)"""
-    return render_template('history.html')
+    """Административная панель истории изменений всех заказов"""
+    return render_template('history_admin.html')
 
 # === API ENDPOINTS ===
 
