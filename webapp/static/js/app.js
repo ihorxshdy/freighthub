@@ -967,6 +967,12 @@ function renderCustomerOrders(orders, container, tabId) {
                     </button>
                 </div>
             ` : ''}
+            
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--separator-color);">
+                <button class="btn btn-small btn-secondary" onclick="viewOrderDetails(${order.id})" style="width: 100%;">
+                    📋 История изменений
+                </button>
+            </div>
         </div>
     `).join('');
     
@@ -1072,6 +1078,12 @@ function renderDriverOrders(orders, container, tabId) {
                     `}
                 </div>
             ` : ''}
+            
+            <div style="margin-top: 12px; padding: 0 16px; padding-top: 12px; border-top: 1px solid var(--separator-color);">
+                <button class="btn btn-small btn-secondary" onclick="viewOrderDetails(${order.id})" style="width: 100%;">
+                    📋 История изменений
+                </button>
+            </div>
         </div>
     `).join('');
     
@@ -1623,5 +1635,191 @@ window.openReviewModal = function(orderId, userId, userName) {
     
     modal.classList.remove('hidden');
 };
+
+// Открыть детали заказа с полной историей изменений
+window.viewOrderDetails = async function(orderId) {
+    try {
+        const modal = document.getElementById('order-details-modal');
+        const orderNumberEl = document.getElementById('detail-order-number');
+        const mainInfoEl = document.getElementById('order-main-info');
+        const timelineEl = document.getElementById('order-history-timeline');
+        
+        // Показываем модальное окно с загрузкой
+        orderNumberEl.textContent = `#${orderId}`;
+        mainInfoEl.innerHTML = '<div style="text-align: center; padding: 20px;">Загрузка...</div>';
+        timelineEl.innerHTML = '<div style="text-align: center; padding: 20px;">Загрузка истории...</div>';
+        modal.classList.remove('hidden');
+        
+        // Загружаем данные заказа
+        let ordersData;
+        if (currentUser.role === 'customer') {
+            ordersData = await fetchCustomerOrders(currentUser.telegram_id);
+        } else {
+            ordersData = await fetchDriverOrders(currentUser.telegram_id);
+        }
+        
+        let order = null;
+        
+        // Ищем заказ во всех категориях
+        for (const category of ['pending', 'searching', 'in_progress', 'closed', 'open']) {
+            if (ordersData[category]) {
+                order = ordersData[category].find(o => o.id === orderId);
+                if (order) break;
+            }
+        }
+        
+        if (!order) throw new Error('Order not found');
+        
+        // Отображаем основную информацию
+        mainInfoEl.innerHTML = `
+            <div class="order-info-grid">
+                <div class="order-info-item">
+                    <div class="order-info-label">Откуда</div>
+                    <div class="order-info-value">${order.pickup_location || 'Не указано'}</div>
+                </div>
+                <div class="order-info-item">
+                    <div class="order-info-label">Куда</div>
+                    <div class="order-info-value">${order.delivery_location || 'Не указано'}</div>
+                </div>
+                <div class="order-info-item">
+                    <div class="order-info-label">Тип транспорта</div>
+                    <div class="order-info-value">${order.vehicle_name || 'Не указано'}</div>
+                </div>
+                <div class="order-info-item">
+                    <div class="order-info-label">Цена</div>
+                    <div class="order-info-value">${formatPrice(order.price)}</div>
+                </div>
+                <div class="order-info-item">
+                    <div class="order-info-label">Дата загрузки</div>
+                    <div class="order-info-value">${formatDate(order.pickup_date)}</div>
+                </div>
+                <div class="order-info-item">
+                    <div class="order-info-label">Статус</div>
+                    <div class="order-info-value">${getStatusText(order.status)}</div>
+                </div>
+            </div>
+            ${order.description ? `
+                <div class="order-info-item" style="margin-top: 12px;">
+                    <div class="order-info-label">Описание</div>
+                    <div class="order-info-value">${order.description}</div>
+                </div>
+            ` : ''}
+        `;
+        
+        // Загружаем историю изменений
+        const historyResponse = await fetchWithTimeout(`${API_BASE}api/orders/${orderId}/history`);
+        
+        if (!historyResponse.ok) {
+            timelineEl.innerHTML = '<div class="history-empty">История изменений не найдена</div>';
+            return;
+        }
+        
+        const history = await historyResponse.json();
+        
+        if (!history || history.length === 0) {
+            timelineEl.innerHTML = '<div class="history-empty">📭 История изменений пуста</div>';
+            return;
+        }
+        
+        // Отображаем историю
+        timelineEl.innerHTML = '<div class="history-timeline">' + history.map(item => {
+            const actionIcon = getActionIcon(item.action);
+            const actionText = getActionText(item.action);
+            
+            let changesHtml = '';
+            if (item.old_value && item.new_value && item.field_name) {
+                changesHtml = `
+                    <div class="history-changes">
+                        <div class="history-change-item">
+                            <span class="history-change-label">${getFieldLabel(item.field_name)}:</span>
+                            <span class="history-old-value">${item.old_value}</span>
+                            <span>→</span>
+                            <span class="history-new-value">${item.new_value}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            let commentHtml = '';
+            if (item.description && (item.action === 'cancelled' || item.description.includes('Причина'))) {
+                const comment = item.description.replace('Причина: ', '');
+                commentHtml = `<div class="history-comment">💬 ${comment}</div>`;
+            }
+            
+            return `
+                <div class="history-item">
+                    <div class="history-icon ${item.action}">${actionIcon}</div>
+                    <div class="history-header">
+                        <div class="history-action">${actionText}</div>
+                        <div class="history-time">${formatDate(item.created_at)}</div>
+                    </div>
+                    ${item.user_name ? `<div class="history-user">👤 ${item.user_name} (${item.user_role === 'customer' ? 'Заказчик' : 'Водитель'})</div>` : ''}
+                    ${item.description && !commentHtml ? `<div class="history-description">${item.description}</div>` : ''}
+                    ${changesHtml}
+                    ${commentHtml}
+                </div>
+            `;
+        }).join('') + '</div>';
+        
+    } catch (error) {
+        console.error('Error loading order details:', error);
+        showError('Ошибка загрузки деталей заказа');
+    }
+};
+
+function getActionIcon(action) {
+    const icons = {
+        'created': '➕',
+        'updated': '✏️',
+        'status_changed': '🔄',
+        'bid_added': '💰',
+        'bid_updated': '📝',
+        'winner_selected': '👑',
+        'confirmed': '✅',
+        'cancelled': '❌',
+        'completed': '🎉'
+    };
+    return icons[action] || '📌';
+}
+
+function getActionText(action) {
+    const texts = {
+        'created': 'Заказ создан',
+        'updated': 'Заказ обновлен',
+        'status_changed': 'Статус изменен',
+        'bid_added': 'Добавлено предложение',
+        'bid_updated': 'Предложение обновлено',
+        'winner_selected': 'Выбран исполнитель',
+        'confirmed': 'Подтверждено',
+        'cancelled': 'Отменено',
+        'completed': 'Завершено'
+    };
+    return texts[action] || action;
+}
+
+function getFieldLabel(field) {
+    const labels = {
+        'status': 'Статус',
+        'price': 'Цена',
+        'pickup_location': 'Откуда',
+        'delivery_location': 'Куда',
+        'pickup_date': 'Дата загрузки',
+        'description': 'Описание',
+        'vehicle_type': 'Тип транспорта',
+        'winner_id': 'Исполнитель'
+    };
+    return labels[field] || field;
+}
+
+function getStatusText(status) {
+    const statuses = {
+        'pending': 'Ожидает предложений',
+        'in_progress': 'В процессе',
+        'completed': 'Завершен',
+        'cancelled': 'Отменен',
+        'closed': 'Закрыт'
+    };
+    return statuses[status] || status;
+}
 
 
