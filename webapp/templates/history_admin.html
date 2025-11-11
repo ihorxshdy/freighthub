@@ -574,6 +574,20 @@
                                 </div>
                                 ${item.user_name ? `<div class="timeline-user">👤 ${item.user_name} (${item.user_role === 'customer' ? 'Заказчик' : 'Водитель'})</div>` : ''}
                                 ${item.description ? `<div class="timeline-description">${item.description}</div>` : ''}
+                                ${item.customer_name ? `
+                                    <div class="timeline-user" style="font-size: 12px; color: #666;">
+                                        📱 Заказчик: ${item.customer_name}
+                                        ${item.customer_telegram_id ? ` (TG: ${item.customer_telegram_id})` : ''}
+                                        ${item.customer_phone ? ` | ☎️ ${item.customer_phone}` : ''}
+                                    </div>
+                                ` : ''}
+                                ${item.driver_name ? `
+                                    <div class="timeline-user" style="font-size: 12px; color: #666;">
+                                        🚚 Водитель: ${item.driver_name}
+                                        ${item.driver_telegram_id ? ` (TG: ${item.driver_telegram_id})` : ''}
+                                        ${item.driver_phone ? ` | ☎️ ${item.driver_phone}` : ''}
+                                    </div>
+                                ` : ''}
                                 ${item.field_name && item.old_value && item.new_value ? `
                                     <div class="timeline-change">
                                         <strong>${getFieldLabel(item.field_name)}:</strong> 
