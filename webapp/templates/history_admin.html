@@ -451,7 +451,8 @@
                 }
 
                 const data = await response.json();
-                allOrders = data.orders || [];
+                // API возвращает массив напрямую, а не объект с ключом orders
+                allOrders = Array.isArray(data) ? data : (data.orders || []);
                 loading.style.display = 'none';
 
                 // Применяем фильтры
@@ -462,7 +463,7 @@
                 if (userId) {
                     filtered = filtered.filter(o => 
                         o.customer_id.toString() === userId || 
-                        o.winner_id?.toString() === userId
+                        o.winner_driver_id?.toString() === userId
                     );
                 }
                 if (statusFilter) {
@@ -495,7 +496,7 @@
             const uniqueUsers = new Set();
             orders.forEach(o => {
                 uniqueUsers.add(o.customer_id);
-                if (o.winner_id) uniqueUsers.add(o.winner_id);
+                if (o.winner_driver_id) uniqueUsers.add(o.winner_driver_id);
             });
 
             document.getElementById('stat-orders').textContent = orders.length;
@@ -517,11 +518,13 @@
                             <div style="flex: 1;">
                                 <div class="order-title">Заказ #${order.id}</div>
                                 <div class="order-info">
-                                    <div><strong>📍 Откуда:</strong> ${order.pickup_location || 'Не указано'}</div>
-                                    <div><strong>📍 Куда:</strong> ${order.delivery_location || 'Не указано'}</div>
+                                    <div><strong>📍 Откуда:</strong> ${order.pickup_address || 'Не указано'}</div>
+                                    <div><strong>📍 Куда:</strong> ${order.delivery_address || 'Не указано'}</div>
+                                    <div><strong>📦 Описание:</strong> ${order.cargo_description || 'Не указано'}</div>
                                     <div><strong>👤 Заказчик:</strong> ${order.customer_name} <span style="color: #999;">(ID: ${order.customer_id})</span></div>
-                                    ${order.winner_id ? `<div><strong>🚚 Исполнитель:</strong> ${order.winner_name || 'ID: ' + order.winner_id}</div>` : ''}
-                                    ${order.price ? `<div><strong>💰 Цена:</strong> ${order.price} ₽</div>` : ''}
+                                    ${order.winner_driver_id ? `<div><strong>🚚 Исполнитель:</strong> ${order.driver_name || 'ID: ' + order.winner_driver_id}</div>` : ''}
+                                    ${order.max_price ? `<div><strong>💰 Макс. цена:</strong> ${order.max_price} ₽</div>` : ''}
+                                    ${order.winning_price ? `<div><strong>💵 Итоговая цена:</strong> ${order.winning_price} ₽</div>` : ''}
                                 </div>
                             </div>
                             <div style="text-align: right;">
