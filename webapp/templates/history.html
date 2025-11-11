@@ -373,7 +373,12 @@
     </button>
 
     <script>
-        const API_BASE = window.location.origin;
+        // Получаем базовый путь из текущего URL
+        const currentPath = window.location.pathname;
+        const basePath = currentPath.includes('/tgbotfiles/freighthub/') 
+            ? '/tgbotfiles/freighthub' 
+            : '';
+        const API_BASE = window.location.origin + basePath;
 
         async function loadHistory() {
             const orderId = document.getElementById('orderIdFilter').value;
