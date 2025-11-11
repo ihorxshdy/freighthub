@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>История заказов - FreightHub</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding-bottom: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-input {
+            flex: 1;
+            min-width: 150px;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .filter-btn {
+            padding: 10px 20px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .filter-btn:active {
+            transform: scale(0.95);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            padding: 15px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .timeline {
+            padding: 15px;
+        }
+
+        .timeline-item {
+            background: white;
+            margin-bottom: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            overflow: hidden;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .timeline-header {
+            padding: 15px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .timeline-time {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .timeline-action {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .action-created { background: #e3f2fd; color: #1976d2; }
+        .action-updated { background: #fff3e0; color: #f57c00; }
+        .action-status_changed { background: #f3e5f5; color: #7b1fa2; }
+        .action-bid_added { background: #e8f5e9; color: #388e3c; }
+        .action-winner_selected { background: #ffe082; color: #f57f17; }
+        .action-confirmed_customer { background: #c8e6c9; color: #2e7d32; }
+        .action-confirmed_driver { background: #c8e6c9; color: #2e7d32; }
+        .action-cancelled { background: #ffcdd2; color: #c62828; }
+        .action-completed { background: #4caf50; color: white; }
+
+        .timeline-body {
+            padding: 15px;
+        }
+
+        .timeline-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .timeline-description {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .timeline-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            font-size: 12px;
+        }
+
+        .detail-item {
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .detail-label {
+            color: #999;
+            margin-bottom: 3px;
+        }
+
+        .detail-value {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .order-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #667eea;
+            color: white;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            margin: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #c62828;
+        }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99;
+        }
+
+        .refresh-btn:active {
+            transform: scale(0.95);
+        }
+
+        .value-change {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .value-old {
+            flex: 1;
+            padding: 8px;
+            background: #ffebee;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .value-arrow {
+            color: #999;
+            font-size: 20px;
+        }
+
+        .value-new {
+            flex: 1;
+            padding: 8px;
+            background: #e8f5e9;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 История заказов</h1>
+        <div class="filters">
+            <input type="number" id="orderIdFilter" class="filter-input" placeholder="№ заказа">
+            <input type="number" id="userIdFilter" class="filter-input" placeholder="ID пользователя">
+            <select id="limitFilter" class="filter-input">
+                <option value="20">20 записей</option>
+                <option value="50">50 записей</option>
+                <option value="100" selected>100 записей</option>
+                <option value="200">200 записей</option>
+            </select>
+            <button class="filter-btn" onclick="loadHistory()">🔍 Поиск</button>
+        </div>
+    </div>
+
+    <div class="stats" id="stats">
+        <div class="stat-card">
+            <div class="stat-value" id="totalRecords">0</div>
+            <div class="stat-label">Записей</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="uniqueOrders">0</div>
+            <div class="stat-label">Заказов</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="uniqueUsers">0</div>
+            <div class="stat-label">Пользователей</div>
+        </div>
+    </div>
+
+    <div id="loading" class="loading" style="display: none;">
+        <div class="spinner"></div>
+        <div>Загрузка истории...</div>
+    </div>
+
+    <div id="error" class="error" style="display: none;"></div>
+
+    <div id="timeline" class="timeline"></div>
+
+    <button class="refresh-btn" onclick="loadHistory()" title="Обновить">
+        ↻
+    </button>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        async function loadHistory() {
+            const orderId = document.getElementById('orderIdFilter').value;
+            const userId = document.getElementById('userIdFilter').value;
+            const limit = document.getElementById('limitFilter').value;
+
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const timeline = document.getElementById('timeline');
+
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            timeline.innerHTML = '';
+
+            let url = `${API_BASE}/api/history?limit=${limit}`;
+            if (orderId) url += `&order_id=${orderId}`;
+            if (userId) url += `&user_id=${userId}`;
+
+            try {
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                loading.style.display = 'none';
+
+                if (data.length === 0) {
+                    timeline.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">📭</div>
+                            <div>История не найдена</div>
+                        </div>
+                    `;
+                    updateStats([], {});
+                    return;
+                }
+
+                renderTimeline(data);
+                updateStats(data, {orderId, userId});
+
+            } catch (err) {
+                loading.style.display = 'none';
+                error.style.display = 'block';
+                error.textContent = `Ошибка загрузки: ${err.message}`;
+            }
+        }
+
+        function renderTimeline(data) {
+            const timeline = document.getElementById('timeline');
+            
+            timeline.innerHTML = data.map(item => {
+                const userInitial = (item.user_name || 'U')[0].toUpperCase();
+                const actionClass = `action-${item.action}`;
+                const actionLabel = getActionLabel(item.action);
+
+                let detailsHtml = '';
+                if (item.order_id) {
+                    detailsHtml += `
+                        <div class="detail-item">
+                            <div class="detail-label">Заказ</div>
+                            <div class="detail-value">
+                                <span class="order-badge">#${item.order_id}</span>
+                                ${item.order_status ? `<br><small>${getStatusLabel(item.order_status)}</small>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (item.truck_type) {
+                    detailsHtml += `
+                        <div class="detail-item">
+                            <div class="detail-label">Тип машины</div>
+                            <div class="detail-value">${item.truck_type}</div>
+                        </div>
+                    `;
+                }
+
+                if (item.pickup_address) {
+                    detailsHtml += `
+                        <div class="detail-item">
+                            <div class="detail-label">Откуда</div>
+                            <div class="detail-value">${item.pickup_address}</div>
+                        </div>
+                    `;
+                }
+
+                if (item.delivery_address) {
+                    detailsHtml += `
+                        <div class="detail-item">
+                            <div class="detail-label">Куда</div>
+                            <div class="detail-value">${item.delivery_address}</div>
+                        </div>
+                    `;
+                }
+
+                let valueChangeHtml = '';
+                if (item.old_value || item.new_value) {
+                    valueChangeHtml = `
+                        <div class="value-change">
+                            <div class="value-old">
+                                <div class="detail-label">Было</div>
+                                <div class="detail-value">${item.old_value || '-'}</div>
+                            </div>
+                            <div class="value-arrow">→</div>
+                            <div class="value-new">
+                                <div class="detail-label">Стало</div>
+                                <div class="detail-value">${item.new_value || '-'}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="timeline-item">
+                        <div class="timeline-header">
+                            <span class="timeline-action ${actionClass}">${actionLabel}</span>
+                            <span class="timeline-time">${formatDateTime(item.created_at)}</span>
+                        </div>
+                        <div class="timeline-body">
+                            <div class="timeline-user">
+                                <div class="user-avatar">${userInitial}</div>
+                                <div class="user-info">
+                                    <div class="user-name">${item.user_name || 'Неизвестно'}</div>
+                                    <div class="user-role">
+                                        ${getRoleLabel(item.user_role)}
+                                        ${item.user_telegram_id ? ` • TG: ${item.user_telegram_id}` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            ${item.description ? `<div class="timeline-description">${item.description}</div>` : ''}
+                            ${valueChangeHtml}
+                            ${detailsHtml ? `<div class="timeline-details">${detailsHtml}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateStats(data, filters) {
+            const uniqueOrders = new Set(data.map(item => item.order_id)).size;
+            const uniqueUsers = new Set(data.map(item => item.user_id)).size;
+
+            document.getElementById('totalRecords').textContent = data.length;
+            document.getElementById('uniqueOrders').textContent = filters.orderId ? 1 : uniqueOrders;
+            document.getElementById('uniqueUsers').textContent = filters.userId ? 1 : uniqueUsers;
+        }
+
+        function getActionLabel(action) {
+            const labels = {
+                'created': 'Создан',
+                'updated': 'Обновлен',
+                'status_changed': 'Статус изменен',
+                'bid_added': 'Предложение',
+                'winner_selected': 'Выбран исполнитель',
+                'confirmed_customer': 'Подтвержден (заказчик)',
+                'confirmed_driver': 'Подтвержден (водитель)',
+                'cancelled': 'Отменен',
+                'completed': 'Завершен',
+                'price_changed': 'Цена изменена'
+            };
+            return labels[action] || action;
+        }
+
+        function getRoleLabel(role) {
+            const labels = {
+                'customer': '👤 Заказчик',
+                'driver': '🚚 Водитель',
+                'admin': '⚙️ Админ'
+            };
+            return labels[role] || role || '-';
+        }
+
+        function getStatusLabel(status) {
+            const labels = {
+                'active': 'Активен',
+                'auction_completed': 'Подбор завершен',
+                'in_progress': 'В процессе',
+                'completed': 'Завершен',
+                'cancelled': 'Отменен',
+                'closed': 'Закрыт',
+                'no_offers': 'Нет предложений'
+            };
+            return labels[status] || status;
+        }
+
+        function formatDateTime(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = now - date;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor(diff / (1000 * 60));
+
+            if (minutes < 1) return 'только что';
+            if (minutes < 60) return `${minutes} мин назад`;
+            if (hours < 24) return `${hours} ч назад`;
+
+            return date.toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Автозагрузка при открытии страницы
+        window.addEventListener('load', () => {
+            loadHistory();
+        });
+    </script>
+</body>
+</html>

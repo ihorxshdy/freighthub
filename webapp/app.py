@@ -68,6 +68,11 @@ def index():
     # Передаём timestamp для cache busting
     return render_template('index.html', version=int(time.time()))
 
+@app.route('/history')
+def view_history():
+    """Страница просмотра истории изменений заказов (mobile-friendly)"""
+    return render_template('history.html')
+
 # === API ENDPOINTS ===
 
 @app.route('/api/user', methods=['GET'])
