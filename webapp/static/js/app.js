@@ -881,7 +881,7 @@ async function loadOrderPhotos(orderId) {
 
         const response = await fetch(`${API_BASE}api/orders/${orderId}/photos`, {
             headers: {
-                'telegram_id': telegram_id.toString()
+                'telegram-id': telegram_id.toString()
             }
         });
 
@@ -1949,7 +1949,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('FormData telegram_id:', telegramIdStr);
                 
                 const headers = {
-                    'telegram_id': telegramIdStr
+                    'telegram-id': telegramIdStr
                 };
                 console.log('Request headers:', headers);
                 console.log('Request URL:', `${API_BASE}api/orders/${orderId}/photos/${photoType}`);
