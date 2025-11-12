@@ -912,9 +912,9 @@ async function loadOrderPhotos(orderId) {
                     <div class="photo-stage-title">Фото загрузки груза</div>
                     <div class="photo-grid">
                         ${photos.loading.map(photo => `
-                            <img src="${API_BASE}api/photos/${photo.id}" 
+                            <img src="${API_BASE}api/photos/${photo.id}?telegram_id=${telegram_id}" 
                                  class="photo-thumbnail" 
-                                 onclick="openPhotoModal('${API_BASE}api/photos/${photo.id}')"
+                                 onclick="openPhotoModal('${API_BASE}api/photos/${photo.id}?telegram_id=${telegram_id}')"
                                  alt="Фото загрузки">
                         `).join('')}
                     </div>
@@ -929,9 +929,9 @@ async function loadOrderPhotos(orderId) {
                     <div class="photo-stage-title">Фото выгрузки груза</div>
                     <div class="photo-grid">
                         ${photos.unloading.map(photo => `
-                            <img src="${API_BASE}api/photos/${photo.id}" 
+                            <img src="${API_BASE}api/photos/${photo.id}?telegram_id=${telegram_id}" 
                                  class="photo-thumbnail" 
-                                 onclick="openPhotoModal('${API_BASE}api/photos/${photo.id}')"
+                                 onclick="openPhotoModal('${API_BASE}api/photos/${photo.id}?telegram_id=${telegram_id}')"
                                  alt="Фото выгрузки">
                         `).join('')}
                     </div>
