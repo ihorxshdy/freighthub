@@ -41,11 +41,22 @@ def setup_photo_routes(app, get_db_connection):
     
     def upload_photos(order_id, photo_type):
         """Общая функция загрузки фото"""
+        print(f"[PHOTO UPLOAD] Order: {order_id}, Type: {photo_type}")
+        print(f"[PHOTO UPLOAD] Headers: {dict(request.headers)}")
+        print(f"[PHOTO UPLOAD] Files: {request.files}")
+        
         telegram_id = request.headers.get('telegram_id')
         if not telegram_id:
+            print("[PHOTO UPLOAD] ERROR: No telegram_id header")
             return jsonify({'error': 'telegram_id header required'}), 400
         
-        telegram_id = int(telegram_id)
+        try:
+            telegram_id = int(telegram_id)
+            print(f"[PHOTO UPLOAD] Telegram ID: {telegram_id}")
+        except (ValueError, TypeError) as e:
+            print(f"[PHOTO UPLOAD] ERROR: Invalid telegram_id: {telegram_id}, error: {e}")
+            return jsonify({'error': 'Invalid telegram_id format'}), 400
+        
         conn = get_db_connection()
         
         try:
