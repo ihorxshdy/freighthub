@@ -445,7 +445,7 @@ async function fetchUserReviews(telegramId) {
     }
 }
 
-async function submitReview(orderId, revieweeTelegramId, rating, comment, detailedRatings, badges) {
+async function submitReview(orderId, revieweeTelegramId, rating, comment, badges) {
     const response = await fetchWithTimeout(`${API_BASE}api/reviews/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -457,7 +457,7 @@ async function submitReview(orderId, revieweeTelegramId, rating, comment, detail
             comment: comment,
             punctuality_rating: null,
             quality_rating: null,
-            professionalism_rating: detailedRatings.professionalism || null,
+            professionalism_rating: null,
             communication_rating: null,
             vehicle_condition_rating: null,
             badges: badges,
@@ -1226,10 +1226,7 @@ function initModals() {
     const cancelReviewBtn = document.getElementById('cancel-review');
     const ratingStars = document.querySelectorAll('.rating-star');
     
-    // Состояние для детальных оценок и комплиментов
-    let detailedRatings = {
-        professionalism: 0
-    };
+    // Состояние для комплиментов
     let selectedBadges = [];
     
     // Загрузка комплиментов
@@ -1279,37 +1276,12 @@ function initModals() {
         });
     });
     
-    // Обработчики для детальных критериев
-    document.querySelectorAll('.rating-input-small').forEach(container => {
-        const criteria = container.dataset.criteria;
-        const stars = container.querySelectorAll('.rating-star-small');
-        
-        stars.forEach(star => {
-            star.addEventListener('click', () => {
-                const value = parseInt(star.dataset.value);
-                detailedRatings[criteria] = value;
-                
-                const ratingInput = document.getElementById(`${criteria}-rating`);
-                if (ratingInput) {
-                    ratingInput.value = value;
-                }
-                
-                stars.forEach(s => {
-                    const starValue = parseInt(s.dataset.value);
-                    s.classList.toggle('active', starValue <= value);
-                });
-            });
-        });
-    });
-    
     if (cancelReviewBtn) {
         cancelReviewBtn.addEventListener('click', () => {
             reviewModal.classList.add('hidden');
             reviewForm.reset();
             ratingStars.forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.rating-star-small').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.badge-item').forEach(b => b.classList.remove('selected'));
-            detailedRatings = { professionalism: 0 };
             selectedBadges = [];
         });
     }
@@ -1329,13 +1301,11 @@ function initModals() {
             }
             
             try {
-                await submitReview(orderId, revieweeTelegramId, rating, comment, detailedRatings, selectedBadges);
+                await submitReview(orderId, revieweeTelegramId, rating, comment, selectedBadges);
                 reviewModal.classList.add('hidden');
                 reviewForm.reset();
                 ratingStars.forEach(s => s.classList.remove('active'));
-                document.querySelectorAll('.rating-star-small').forEach(s => s.classList.remove('active'));
                 document.querySelectorAll('.badge-item').forEach(b => b.classList.remove('selected'));
-                detailedRatings = { professionalism: 0 };
                 selectedBadges = [];
                 showSuccess('Спасибо за ваш отзыв!');
                 refreshOrders();
@@ -1704,16 +1674,9 @@ window.openReviewModal = function(orderId, userId, userName, userTelegramId) {
     
     // Сбросить все оценки
     document.querySelectorAll('.rating-star').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.rating-star-small').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.badge-item').forEach(b => b.classList.remove('selected'));
     document.getElementById('rating-value').value = '';
     document.getElementById('review-comment').value = '';
-    
-    // Сбросить скрытое поле профессионализма
-    const professionalismRating = document.getElementById('professionalism-rating');
-    if (professionalismRating) {
-        professionalismRating.value = '';
-    }
     
     modal.classList.remove('hidden');
 };

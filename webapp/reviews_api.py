@@ -8,6 +8,7 @@ from datetime import datetime
 
 # Доступные значки/комплименты
 AVAILABLE_BADGES = {
+    'professional': 'Профессионализм',
     'fast_delivery': 'Быстрая доставка',
     'friendly': 'Приветливый',
     'fair_price': 'Честная цена',
