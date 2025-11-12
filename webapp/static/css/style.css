@@ -1788,6 +1788,7 @@ body.role-customer .fab {
     flex-direction: column;
     max-width: 75%;
     animation: messageSlide 0.2s ease-out;
+    gap: 1px;
 }
 
 @keyframes messageSlide {
@@ -1839,9 +1840,10 @@ body.role-customer .fab {
 .chat-message-time {
     font-size: 10px;
     color: var(--tg-theme-hint-color);
-    margin-top: 2px;
+    margin-top: 1px;
     padding: 0 4px;
     text-align: right;
+    line-height: 1.2;
 }
 
 .chat-message.theirs .chat-message-time {
