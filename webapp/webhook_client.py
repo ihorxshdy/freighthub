@@ -101,3 +101,28 @@ def notify_auction_bids_ready(order_id, customer_user_id, cargo_description, bid
         'bids_count': bids_count,
         'min_price': min_price
     })
+
+
+def send_webhook_notification(notification_data):
+    """
+    Универсальная функция для отправки уведомлений
+    Используется для отправки уведомлений о сообщениях в чате
+    
+    notification_data должен содержать:
+    {
+        'type': 'new_chat_message',
+        'order_id': 123,
+        'sender_name': 'Иван',
+        'sender_role': 'customer',
+        'message_text': 'Текст сообщения',
+        'recipient_telegram_id': 123456789
+    }
+    """
+    notification_type = notification_data.get('type')
+    
+    if notification_type == 'new_chat_message':
+        return send_webhook('/webhook/new-chat-message', notification_data)
+    
+    print(f"⚠️  Unknown notification type: {notification_type}")
+    return None
+

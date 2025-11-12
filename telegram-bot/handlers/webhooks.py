@@ -343,6 +343,66 @@ async def webhook_health(request):
     })
 
 
+async def webhook_new_chat_message(request):
+    """
+    Webhook: новое сообщение в чат заказа
+    
+    Ожидаемые данные:
+    {
+        "type": "new_chat_message",
+        "order_id": 123,
+        "sender_name": "Иван",
+        "sender_role": "customer",
+        "message_text": "Когда приедете?",
+        "recipient_telegram_id": 123456789
+    }
+    """
+    if not await verify_webhook_token(request):
+        return web.json_response({'error': 'Unauthorized'}, status=401)
+    
+    try:
+        data = await request.json()
+        bot = request.app['bot']
+        
+        order_id = data.get('order_id')
+        sender_name = data.get('sender_name')
+        sender_role = data.get('sender_role')
+        message_text = data.get('message_text')
+        recipient_telegram_id = data.get('recipient_telegram_id')
+        
+        if not all([order_id, sender_name, sender_role, message_text, recipient_telegram_id]):
+            return web.json_response({'error': 'Missing required fields'}, status=400)
+        
+        # Определяем роль отправителя
+        sender_role_text = "водителя" if sender_role == "driver" else "заказчика"
+        
+        # Формируем сообщение
+        notification_text = (
+            f"💬 <b>Новое сообщение от {sender_role_text}</b>\n\n"
+            f"📦 Заказ #{order_id}\n"
+            f"👤 {sender_name}: {message_text}\n\n"
+            f"<i>Откройте приложение для ответа</i>"
+        )
+        
+        # Отправляем уведомление получателю
+        try:
+            await bot.send_message(
+                chat_id=recipient_telegram_id,
+                text=notification_text,
+                parse_mode='HTML'
+            )
+            logger.info(f"Chat message notification sent to {recipient_telegram_id} for order {order_id}")
+        except Exception as e:
+            logger.error(f"Failed to send chat notification: {e}")
+            return web.json_response({'error': f'Failed to send notification: {str(e)}'}, status=500)
+        
+        return web.json_response({'status': 'ok'})
+        
+    except Exception as e:
+        logger.error(f"Webhook new_chat_message error: {e}")
+        return web.json_response({'error': str(e)}, status=500)
+
+
 def setup_webhook_handlers(app, bot: Bot):
     """Настройка обработчиков webhook"""
     app['bot'] = bot
@@ -352,5 +412,6 @@ def setup_webhook_handlers(app, bot: Bot):
     app.router.add_post('/webhook/auction-bids-ready', webhook_auction_bids_ready)
     app.router.add_post('/webhook/order-confirmed', webhook_order_confirmed)
     app.router.add_post('/webhook/order-cancelled', webhook_order_cancelled)
+    app.router.add_post('/webhook/new-chat-message', webhook_new_chat_message)
     app.router.add_get('/webhook/health', webhook_health)
     logger.info("Webhook handlers настроены")
