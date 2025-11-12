@@ -338,6 +338,25 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Модальное окно чата -->
+        <div id="chat-modal" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content chat-modal-content">
+                <div class="modal-header">
+                    <h3 id="chat-modal-title">Чат с водителем</h3>
+                    <button type="button" class="close-modal" id="close-chat">&times;</button>
+                </div>
+                <div class="modal-body chat-modal-body">
+                    <div id="chat-messages-container" class="chat-messages-container"></div>
+                    
+                    <form id="chat-message-form" class="chat-input-form">
+                        <textarea id="chat-message-input" placeholder="Введите сообщение..." rows="2" maxlength="2000"></textarea>
+                        <button type="submit" class="btn btn-primary btn-send-message">Отправить</button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="static/js/app.js?v={{ version }}"></script>

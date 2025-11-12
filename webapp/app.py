@@ -20,6 +20,7 @@ from truck_config import TRUCK_CATEGORIES, DATABASE_PATH, SECRET_KEY
 from webhook_client import notify_new_order  # Webhook уведомления
 from reviews_api import setup_review_routes  # Расширенная система отзывов
 from photos_api import setup_photo_routes  # Фотофиксация этапов доставки
+from chat_api import setup_chat_routes  # Система чата
 
 app = Flask(__name__)
 CORS(app)
@@ -1291,6 +1292,9 @@ setup_review_routes(app, get_db_connection)
 
 # Подключаем систему фотофиксации этапов доставки
 setup_photo_routes(app, get_db_connection)
+
+# Подключаем систему чата
+setup_chat_routes(app, get_db_connection)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

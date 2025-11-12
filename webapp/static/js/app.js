@@ -1062,6 +1062,11 @@ function renderCustomerOrders(orders, container, tabId) {
                     </div>
                 </div>
                 <div id="photos-section-${order.id}" class="photos-section" style="margin-top: 15px;"></div>
+                <div style="margin-top: 15px; display: flex; gap: 8px;">
+                    <button class="btn btn-small btn-primary" onclick="openChat(${order.id}, '${(order.driver_name || 'Водитель').replace(/'/g, "\\'")}', 'driver')" style="flex: 1;">
+                        💬 Чат с водителем
+                    </button>
+                </div>
                 <div style="margin-top: 10px;">
                     ${order.customer_confirmed ? `
                         <div class="slide-to-confirm confirmed">
@@ -1190,6 +1195,9 @@ function renderDriverOrders(orders, container, tabId) {
             ${tabId === 'in_progress' ? `
                 <div id="photos-section-${order.id}" class="photos-section" style="margin-top: 15px;"></div>
                 <div style="margin-top: 10px; padding: 0 16px;">
+                    <button class="btn btn-small btn-primary" onclick="openChat(${order.id}, '${(order.customer_name || 'Заказчик').replace(/'/g, "\\'")}', 'customer')" style="width: 100%; margin-bottom: 10px;">
+                        💬 Чат с заказчиком
+                    </button>
                     ${(order.driver_confirmed === 1 || order.driver_confirmed === true) ? `
                         <div class="slide-to-confirm confirmed">
                             <div class="slide-track">
@@ -2037,5 +2045,229 @@ window.removePhoto = function(index) {
     // Обновляем состояние кнопки
     document.getElementById('submit-photos').disabled = selectedPhotos.length === 0;
 };
+
+// ==================== CHAT FUNCTIONS ====================
+
+let currentChatOrderId = null;
+let chatRefreshInterval = null;
+
+// Открыть чат для заказа
+async function openChat(orderId, recipientName, recipientRole) {
+    currentChatOrderId = orderId;
+    
+    const modal = document.getElementById('chat-modal');
+    const title = document.getElementById('chat-modal-title');
+    
+    // Устанавливаем заголовок
+    const roleText = recipientRole === 'driver' ? 'водителем' : 'заказчиком';
+    title.textContent = `Чат с ${roleText}`;
+    
+    // Показываем модальное окно
+    modal.classList.remove('hidden');
+    
+    // Загружаем сообщения
+    await loadChatMessages(orderId);
+    
+    // Отмечаем сообщения как прочитанные
+    await markMessagesRead(orderId);
+    
+    // Настраиваем автообновление каждые 3 секунды
+    if (chatRefreshInterval) {
+        clearInterval(chatRefreshInterval);
+    }
+    chatRefreshInterval = setInterval(() => {
+        loadChatMessages(orderId);
+    }, 3000);
+    
+    // Фокус на поле ввода
+    setTimeout(() => {
+        document.getElementById('chat-message-input').focus();
+    }, 300);
+}
+
+// Закрыть чат
+function closeChat() {
+    const modal = document.getElementById('chat-modal');
+    modal.classList.add('hidden');
+    
+    if (chatRefreshInterval) {
+        clearInterval(chatRefreshInterval);
+        chatRefreshInterval = null;
+    }
+    
+    currentChatOrderId = null;
+    
+    // Обновляем список заказов чтобы обновить счетчики
+    loadTabData(currentTab, false);
+}
+
+// Загрузить сообщения чата
+async function loadChatMessages(orderId, scrollToBottom = true) {
+    try {
+        const telegram_id = window.Telegram.WebApp.initDataUnsafe.user?.id;
+        
+        const response = await fetch(`${API_BASE}api/orders/${orderId}/messages?telegram_id=${telegram_id}`);
+        
+        if (!response.ok) {
+            console.error('Failed to load chat messages');
+            return;
+        }
+        
+        const data = await response.json();
+        const container = document.getElementById('chat-messages-container');
+        
+        if (!data.messages || data.messages.length === 0) {
+            container.innerHTML = '<div class="chat-empty-state">Сообщений пока нет.<br>Начните диалог!</div>';
+            return;
+        }
+        
+        container.innerHTML = data.messages.map(msg => `
+            <div class="chat-message ${msg.is_mine ? 'mine' : 'theirs'}">
+                <div class="chat-message-header">
+                    ${msg.sender_name} • ${msg.sender_role === 'driver' ? 'Водитель' : 'Заказчик'}
+                </div>
+                <div class="chat-message-bubble">
+                    ${escapeHtml(msg.message_text)}
+                </div>
+                <div class="chat-message-time">
+                    ${formatDateTime(msg.created_at)}
+                </div>
+            </div>
+        `).join('');
+        
+        // Прокручиваем вниз
+        if (scrollToBottom) {
+            container.scrollTop = container.scrollHeight;
+        }
+        
+    } catch (error) {
+        console.error('Error loading chat messages:', error);
+    }
+}
+
+// Отправить сообщение
+async function sendChatMessage(event) {
+    event.preventDefault();
+    
+    const textarea = document.getElementById('chat-message-input');
+    const messageText = textarea.value.trim();
+    
+    if (!messageText || !currentChatOrderId) {
+        return;
+    }
+    
+    try {
+        const telegram_id = window.Telegram.WebApp.initDataUnsafe.user?.id;
+        
+        const response = await fetch(`${API_BASE}api/orders/${currentChatOrderId}/messages`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                telegram_id: telegram_id,
+                message_text: messageText
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            alert(error.error || 'Ошибка отправки сообщения');
+            return;
+        }
+        
+        // Очищаем поле ввода
+        textarea.value = '';
+        textarea.style.height = 'auto';
+        
+        // Перезагружаем сообщения
+        await loadChatMessages(currentChatOrderId);
+        
+        // Фокус обратно на поле
+        textarea.focus();
+        
+    } catch (error) {
+        console.error('Error sending message:', error);
+        alert('Ошибка отправки сообщения');
+    }
+}
+
+// Отметить сообщения как прочитанные
+async function markMessagesRead(orderId) {
+    try {
+        const telegram_id = window.Telegram.WebApp.initDataUnsafe.user?.id;
+        
+        await fetch(`${API_BASE}api/orders/${orderId}/messages/read`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                telegram_id: telegram_id
+            })
+        });
+        
+    } catch (error) {
+        console.error('Error marking messages as read:', error);
+    }
+}
+
+// Получить счетчики непрочитанных сообщений
+async function getUnreadCounts() {
+    try {
+        const telegram_id = window.Telegram.WebApp.initDataUnsafe.user?.id;
+        
+        const response = await fetch(`${API_BASE}api/orders/unread-messages-count?telegram_id=${telegram_id}`);
+        
+        if (!response.ok) {
+            return {};
+        }
+        
+        const data = await response.json();
+        return data.unread_by_order || {};
+        
+    } catch (error) {
+        console.error('Error getting unread counts:', error);
+        return {};
+    }
+}
+
+// Вспомогательная функция для экранирования HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Форматирование даты и времени для сообщений
+function formatDateTime(dateStr) {
+    if (!dateStr) return '';
+    
+    const date = new Date(dateStr);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    
+    const timeStr = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    
+    if (messageDate.getTime() === today.getTime()) {
+        return timeStr;
+    } else if (messageDate.getTime() === today.getTime() - 86400000) {
+        return `Вчера ${timeStr}`;
+    } else {
+        return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }) + ' ' + timeStr;
+    }
+}
+
+// Event listeners для чата
+document.getElementById('close-chat')?.addEventListener('click', closeChat);
+document.getElementById('chat-modal')?.querySelector('.modal-overlay')?.addEventListener('click', closeChat);
+document.getElementById('chat-message-form')?.addEventListener('submit', sendChatMessage);
+
+// Auto-resize textarea
+document.getElementById('chat-message-input')?.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
 
 
