@@ -1957,8 +1957,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('Фотографии успешно загружены!');
                 document.getElementById('photo-upload-modal').classList.add('hidden');
                 
-                // Перезагружаем заказы
-                await loadOrdersForTab();
+                // Перезагружаем данные текущей вкладки
+                await loadTabData(currentTab, true);
                 
             } catch (error) {
                 console.error('Error uploading photos:', error);
