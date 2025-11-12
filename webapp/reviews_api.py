@@ -119,7 +119,7 @@ def setup_review_routes(app, get_db_connection):
             conn.close()
     
     @app.route('/api/reviews/user/<int:telegram_id>', methods=['GET'])
-    def get_user_reviews(telegram_id):
+    def get_detailed_user_reviews(telegram_id):
         """Получить все отзывы о пользователе с детальными критериями"""
         conn = get_db_connection()
         
