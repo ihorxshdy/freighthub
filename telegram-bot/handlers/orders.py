@@ -27,6 +27,10 @@ class OrderStates(StatesGroup):
 class BidStates(StatesGroup):
     entering_bid = State()
 
+class PhotoStates(StatesGroup):
+    uploading_loading_photos = State()
+    uploading_unloading_photos = State()
+
 # Хранилище активных подборов
 active_auctions = {}
 
@@ -922,17 +926,26 @@ async def notify_drivers_about_results(bot: Bot, order_id: int, all_bids: list, 
         driver_telegram_id = bid['driver_telegram_id']
         
         if bid['driver_id'] == winning_bid['driver_id']:
-            # Победитель - получает контакты заказчика
+            # Победитель - получает контакты заказчика и кнопку для загрузки фото
             truck_name = get_truck_display_name(order['truck_type'])
             message_text = (
                 f"🎉 Поздравляем! Вы выиграли заявку #{order_id}\n\n"
                 f"🚚 Тип машины: {truck_name}\n"
-                f"� Описание: {order['cargo_description']}\n"
-                f"� Ваша цена: {bid['price']} руб.\n\n"
+                f"📦 Описание: {order['cargo_description']}\n"
+                f"💰 Ваша цена: {bid['price']} руб.\n\n"
                 f"👤 Заказчик: {customer_info['name'] if customer_info else 'Неизвестно'}\n"
                 f"📞 Телефон заказчика: {customer_info['phone'] if customer_info else 'Неизвестно'}\n\n"
-                f"Свяжитесь с заказчиком для уточнения деталей доставки."
+                f"Свяжитесь с заказчиком для уточнения деталей доставки.\n\n"
+                f"⚠️ Не забудьте подтвердить загрузку груза с фотографиями!"
             )
+            
+            # Добавляем кнопку для подтверждения загрузки
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(
+                    text="📦 Подтвердить загрузку груза",
+                    callback_data=f"upload_loading_{order_id}"
+                )]
+            ])
         else:
             # Проигравший
             message_text = (
@@ -942,31 +955,285 @@ async def notify_drivers_about_results(bot: Bot, order_id: int, all_bids: list, 
                 f"К сожалению, выбран водитель с более низкой ценой."
             )
         
+        # Определяем параметры для отправки
+        send_params = {'chat_id': driver_telegram_id, 'text': message_text}
+        
+        # Добавляем клавиатуру только для победителя
+        if bid['driver_id'] == winning_bid['driver_id']:
+            send_params['reply_markup'] = keyboard
+        
         # Пытаемся обновить существующее сообщение
         if driver_telegram_id in messages_by_telegram_id:
             msg_info = messages_by_telegram_id[driver_telegram_id]
             try:
-                await bot.edit_message_text(
-                    chat_id=msg_info['chat_id'],
-                    message_id=msg_info['message_id'],
-                    text=message_text
-                )
+                # Для победителя отправляем новое сообщение с кнопками
+                if bid['driver_id'] == winning_bid['driver_id']:
+                    await bot.send_message(**send_params)
+                else:
+                    await bot.edit_message_text(
+                        chat_id=msg_info['chat_id'],
+                        message_id=msg_info['message_id'],
+                        text=message_text
+                    )
             except Exception as e:
                 logging.error(f"Ошибка при обновлении сообщения водителя {driver_telegram_id}: {e}")
                 # Fallback - отправляем новое сообщение
                 try:
-                    await bot.send_message(
-                        chat_id=driver_telegram_id,
-                        text=message_text
-                    )
+                    await bot.send_message(**send_params)
                 except Exception as e2:
                     logging.error(f"Ошибка отправки нового сообщения водителю {driver_telegram_id}: {e2}")
         else:
             # Если сообщение не найдено, отправляем новое
             try:
-                await bot.send_message(
-                    chat_id=driver_telegram_id,
-                    text=message_text
-                )
+                await bot.send_message(**send_params)
             except Exception as e:
                 logging.error(f"Ошибка отправки уведомления водителю {driver_telegram_id}: {e}")
+
+
+# ==================== ФОТОФИКСАЦИЯ ЭТАПОВ ДОСТАВКИ ====================
+
+@router.callback_query(F.data.startswith("upload_loading_"))
+async def start_loading_photo_upload(callback: CallbackQuery, state: FSMContext):
+    """Начало загрузки фото загрузки груза"""
+    if not callback.message or not callback.from_user:
+        return
+    
+    order_id = int(callback.data.split("_")[2])
+    
+    await state.update_data(order_id=order_id, photo_type="loading", photos=[])
+    await state.set_state(PhotoStates.uploading_loading_photos)
+    
+    await callback.message.answer(
+        "📸 Загрузите фото загрузки груза (от 1 до 5 фотографий).\n\n"
+        "После загрузки всех фото нажмите /done\n"
+        "Для отмены нажмите /cancel"
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("upload_unloading_"))
+async def start_unloading_photo_upload(callback: CallbackQuery, state: FSMContext):
+    """Начало загрузки фото выгрузки груза"""
+    if not callback.message or not callback.from_user:
+        return
+    
+    order_id = int(callback.data.split("_")[2])
+    
+    await state.update_data(order_id=order_id, photo_type="unloading", photos=[])
+    await state.set_state(PhotoStates.uploading_unloading_photos)
+    
+    await callback.message.answer(
+        "📸 Загрузите фото выгрузки груза (от 1 до 5 фотографий).\n\n"
+        "После загрузки всех фото нажмите /done\n"
+        "Для отмены нажмите /cancel"
+    )
+    await callback.answer()
+
+
+@router.message(StateFilter(PhotoStates.uploading_loading_photos, PhotoStates.uploading_unloading_photos), F.photo)
+async def receive_photo(message: Message, state: FSMContext):
+    """Прием фотографий от водителя"""
+    if not message.from_user or not message.photo:
+        return
+    
+    data = await state.get_data()
+    photos = data.get('photos', [])
+    
+    if len(photos) >= 5:
+        await message.answer("❌ Максимум 5 фотографий. Нажмите /done для завершения.")
+        return
+    
+    # Получаем самое большое фото
+    photo = message.photo[-1]
+    photos.append({
+        'file_id': photo.file_id,
+        'file_unique_id': photo.file_unique_id
+    })
+    
+    await state.update_data(photos=photos)
+    
+    await message.answer(
+        f"✅ Фото {len(photos)}/5 получено.\n"
+        f"Можете загрузить еще {5 - len(photos)} фото или нажмите /done"
+    )
+
+
+@router.message(StateFilter(PhotoStates.uploading_loading_photos, PhotoStates.uploading_unloading_photos), F.text == "/done")
+async def finish_photo_upload(message: Message, state: FSMContext, bot: Bot):
+    """Завершение загрузки фотографий и отправка на сервер"""
+    if not message.from_user:
+        return
+    
+    data = await state.get_data()
+    photos = data.get('photos', [])
+    order_id = data.get('order_id')
+    photo_type = data.get('photo_type')
+    
+    if not photos:
+        await message.answer("❌ Вы не загрузили ни одного фото. Попробуйте снова.")
+        await state.clear()
+        return
+    
+    if len(photos) < 1:
+        await message.answer("❌ Нужно загрузить хотя бы 1 фото.")
+        return
+    
+    await message.answer("⏳ Загружаю фотографии на сервер...")
+    
+    try:
+        import aiohttp
+        import io
+        from bot.config import API_BASE_URL
+        
+        # Скачиваем фото из Telegram и загружаем на сервер
+        async with aiohttp.ClientSession() as session:
+            form_data = aiohttp.FormData()
+            
+            for idx, photo_data in enumerate(photos):
+                # Получаем файл из Telegram
+                file = await bot.get_file(photo_data['file_id'])
+                file_bytes = await bot.download_file(file.file_path)
+                
+                # Читаем байты
+                photo_bytes = file_bytes.read() if hasattr(file_bytes, 'read') else file_bytes
+                
+                # Добавляем в form data
+                form_data.add_field(
+                    'photos',
+                    photo_bytes,
+                    filename=f'photo_{idx}.jpg',
+                    content_type='image/jpeg'
+                )
+            
+            # Отправляем на сервер
+            endpoint = f"{API_BASE_URL}/api/orders/{order_id}/photos/{photo_type}"
+            headers = {'telegram_id': str(message.from_user.id)}
+            
+            async with session.post(endpoint, data=form_data, headers=headers) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    
+                    photo_type_ru = "загрузки" if photo_type == "loading" else "выгрузки"
+                    await message.answer(
+                        f"✅ Фотографии {photo_type_ru} успешно загружены!\n"
+                        f"Загружено фото: {result.get('count', len(photos))}"
+                    )
+                    
+                    # Отправляем обновленное меню водителю
+                    await send_driver_order_menu(message.from_user.id, order_id, bot)
+                else:
+                    error_text = await response.text()
+                    logging.error(f"Ошибка загрузки фото: {response.status} - {error_text}")
+                    await message.answer(f"❌ Ошибка при загрузке фотографий: {error_text}")
+    
+    except Exception as e:
+        logging.error(f"Ошибка при загрузке фото: {e}")
+        await message.answer(f"❌ Произошла ошибка: {str(e)}")
+    
+    await state.clear()
+
+
+@router.message(StateFilter(PhotoStates.uploading_loading_photos, PhotoStates.uploading_unloading_photos), F.text == "/cancel")
+async def cancel_photo_upload(message: Message, state: FSMContext):
+    """Отмена загрузки фотографий"""
+    await state.clear()
+    await message.answer("❌ Загрузка фотографий отменена.")
+
+
+async def send_driver_order_menu(driver_telegram_id: int, order_id: int, bot: Bot):
+    """Отправка меню с действиями водителя для заказа"""
+    try:
+        import aiohttp
+        from bot.config import API_BASE_URL
+        
+        # Получаем информацию о заказе с сервера
+        async with aiohttp.ClientSession() as session:
+            headers = {'telegram_id': str(driver_telegram_id)}
+            async with session.get(f"{API_BASE_URL}/api/orders/{order_id}", headers=headers) as response:
+                if response.status != 200:
+                    return
+                
+                order = await response.json()
+        
+        loading_confirmed = order.get('loading_confirmed_at') is not None
+        unloading_confirmed = order.get('unloading_confirmed_at') is not None
+        driver_completed = order.get('driver_completed_at') is not None
+        
+        # Формируем кнопки в зависимости от статуса
+        buttons = []
+        
+        if not loading_confirmed:
+            buttons.append([InlineKeyboardButton(
+                text="📦 Подтвердить загрузку",
+                callback_data=f"upload_loading_{order_id}"
+            )])
+        elif not unloading_confirmed:
+            buttons.append([InlineKeyboardButton(
+                text="📤 Подтвердить выгрузку",
+                callback_data=f"upload_unloading_{order_id}"
+            )])
+        elif not driver_completed:
+            buttons.append([InlineKeyboardButton(
+                text="✅ Подтвердить выполнение",
+                callback_data=f"driver_complete_{order_id}"
+            )])
+        
+        if buttons:
+            keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+            
+            status_text = "📦 Ожидает загрузки груза"
+            if loading_confirmed and not unloading_confirmed:
+                status_text = "🚚 В пути (груз загружен)"
+            elif unloading_confirmed and not driver_completed:
+                status_text = "📤 Груз выгружен, подтвердите выполнение"
+            
+            await bot.send_message(
+                chat_id=driver_telegram_id,
+                text=f"Заказ #{order_id}\nСтатус: {status_text}",
+                reply_markup=keyboard
+            )
+    
+    except Exception as e:
+        logging.error(f"Ошибка отправки меню водителю: {e}")
+
+
+@router.callback_query(F.data.startswith("driver_complete_"))
+async def driver_confirm_completion(callback: CallbackQuery, bot: Bot):
+    """Водитель подтверждает выполнение заказа"""
+    if not callback.message or not callback.from_user:
+        return
+    
+    order_id = int(callback.data.split("_")[2])
+    
+    try:
+        import aiohttp
+        from bot.config import API_BASE_URL
+        
+        # Отправляем запрос на подтверждение
+        async with aiohttp.ClientSession() as session:
+            payload = {'telegram_id': callback.from_user.id}
+            async with session.post(
+                f"{API_BASE_URL}/api/orders/{order_id}/confirm-completion",
+                json=payload
+            ) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    
+                    if result.get('both_confirmed'):
+                        await callback.message.edit_text(
+                            f"✅ Заказ #{order_id} успешно завершен!\n"
+                            f"Обе стороны подтвердили выполнение."
+                        )
+                    else:
+                        await callback.message.edit_text(
+                            f"✅ Вы подтвердили выполнение заказа #{order_id}\n"
+                            f"Ожидается подтверждение от заказчика."
+                        )
+                else:
+                    error_data = await response.json()
+                    error_msg = error_data.get('error', 'Неизвестная ошибка')
+                    await callback.answer(f"❌ Ошибка: {error_msg}", show_alert=True)
+    
+    except Exception as e:
+        logging.error(f"Ошибка подтверждения выполнения: {e}")
+        await callback.answer("❌ Произошла ошибка", show_alert=True)
