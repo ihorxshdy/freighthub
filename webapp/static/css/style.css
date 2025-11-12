@@ -1774,13 +1774,13 @@ body.role-customer .fab {
 .chat-messages-container {
     flex: 1;
     overflow-y: auto;
-    padding: 15px;
+    padding: 10px;
     background: var(--tg-theme-bg-color);
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     border-radius: 8px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 
 .chat-message {
@@ -1812,15 +1812,16 @@ body.role-customer .fab {
 .chat-message-header {
     font-size: 11px;
     color: var(--tg-theme-hint-color);
-    margin-bottom: 4px;
-    padding: 0 8px;
+    margin-bottom: 2px;
+    padding: 0 4px;
 }
 
 .chat-message-bubble {
-    padding: 10px 12px;
+    padding: 8px 10px;
     border-radius: 12px;
     word-wrap: break-word;
     white-space: pre-wrap;
+    line-height: 1.4;
 }
 
 .chat-message.mine .chat-message-bubble {
@@ -1838,8 +1839,8 @@ body.role-customer .fab {
 .chat-message-time {
     font-size: 10px;
     color: var(--tg-theme-hint-color);
-    margin-top: 4px;
-    padding: 0 8px;
+    margin-top: 2px;
+    padding: 0 4px;
     text-align: right;
 }
 
