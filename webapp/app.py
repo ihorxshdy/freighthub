@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 # Импорт локальной конфигурации
 from truck_config import TRUCK_CATEGORIES, DATABASE_PATH, SECRET_KEY
 from webhook_client import notify_new_order  # Webhook уведомления
+from reviews_api import setup_review_routes  # Расширенная система отзывов
 
 app = Flask(__name__)
 CORS(app)
@@ -72,6 +73,11 @@ def index():
 def view_history():
     """Административная панель истории изменений всех заказов"""
     return render_template('history_admin.html')
+
+@app.route('/create-review')
+def create_review_page():
+    """Страница создания детального отзыва"""
+    return render_template('create_review.html')
 
 # === API ENDPOINTS ===
 
@@ -1261,6 +1267,9 @@ def get_all_orders_with_history():
         conn.close()
         logger.error(f"Error fetching all orders with history: {e}")
         return jsonify({'error': 'Failed to fetch orders'}), 500
+
+# Подключаем расширенную систему отзывов
+setup_review_routes(app, get_db_connection)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
