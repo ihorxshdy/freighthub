@@ -868,6 +868,93 @@ function initSlideToConfirm() {
     });
 }
 
+// Загрузка и отображение фотографий заказа
+async function loadOrderPhotos(orderId) {
+    try {
+        const telegram_id = window.Telegram.WebApp.initDataUnsafe.user?.id;
+        if (!telegram_id) {
+            console.error('User ID not available');
+            return;
+        }
+
+        const response = await fetch(`/api/orders/${orderId}/photos`, {
+            headers: {
+                'telegram_id': telegram_id.toString()
+            }
+        });
+
+        if (!response.ok) {
+            console.error('Failed to fetch photos');
+            return;
+        }
+
+        const photos = await response.json();
+        const container = document.getElementById(`photos-section-${orderId}`);
+        
+        if (!container) {
+            return;
+        }
+
+        let html = '';
+
+        // Секция фотографий загрузки
+        if (photos.loading && photos.loading.length > 0) {
+            html += `
+                <div class="photo-stage">
+                    <div class="photo-stage-title">Фото загрузки груза</div>
+                    <div class="photo-grid">
+                        ${photos.loading.map(photo => `
+                            <img src="/api/photos/${photo.id}" 
+                                 class="photo-thumbnail" 
+                                 onclick="openPhotoModal('/api/photos/${photo.id}')"
+                                 alt="Фото загрузки">
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Секция фотографий выгрузки
+        if (photos.unloading && photos.unloading.length > 0) {
+            html += `
+                <div class="photo-stage">
+                    <div class="photo-stage-title">Фото выгрузки груза</div>
+                    <div class="photo-grid">
+                        ${photos.unloading.map(photo => `
+                            <img src="/api/photos/${photo.id}" 
+                                 class="photo-thumbnail" 
+                                 onclick="openPhotoModal('/api/photos/${photo.id}')"
+                                 alt="Фото выгрузки">
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        container.innerHTML = html;
+    } catch (error) {
+        console.error('Error loading order photos:', error);
+    }
+}
+
+// Открытие модального окна с фотографией
+function openPhotoModal(photoUrl) {
+    const modal = document.createElement('div');
+    modal.className = 'photo-modal';
+    modal.innerHTML = `
+        <div class="photo-modal-content">
+            <span class="photo-modal-close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+            <img src="${photoUrl}" alt="Фото">
+        </div>
+    `;
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    };
+    document.body.appendChild(modal);
+}
+
 function renderCustomerOrders(orders, container, tabId) {
     if (!orders || orders.length === 0) {
         container.innerHTML = `
@@ -952,6 +1039,7 @@ function renderCustomerOrders(orders, container, tabId) {
                 </div>
             ` : ''}
             ${tabId === 'in_progress' && order.status === 'in_progress' ? `
+                <div id="photos-section-${order.id}" class="photos-section" style="margin-top: 15px;"></div>
                 <div style="margin-top: 10px;">
                     ${order.customer_confirmed ? `
                         <div class="slide-to-confirm confirmed">
@@ -959,13 +1047,19 @@ function renderCustomerOrders(orders, container, tabId) {
                                 <span class="slide-text">✓ Ожидание подтверждения водителем</span>
                             </div>
                         </div>
-                    ` : `
+                    ` : order.driver_completed_at ? `
                         <div class="slide-to-confirm" id="slide-confirm-${order.id}" data-order-id="${order.id}" data-role="customer">
                             <div class="slide-track">
                                 <span class="slide-text">Проведите для подтверждения</span>
                             </div>
                             <div class="slide-button">
                                 <span class="slide-icon">→</span>
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="slide-to-confirm disabled">
+                            <div class="slide-track">
+                                <span class="slide-text">Ожидание подтверждения водителем</span>
                             </div>
                         </div>
                     `}
@@ -981,6 +1075,15 @@ function renderCustomerOrders(orders, container, tabId) {
     
     // Инициализируем слайдеры для подтверждения
     initSlideToConfirm();
+    
+    // Загружаем фотографии для заказов в работе
+    if (tabId === 'in_progress') {
+        orders.forEach(order => {
+            if (order.status === 'in_progress') {
+                loadOrderPhotos(order.id);
+            }
+        });
+    }
 }
 
 function renderDriverOrders(orders, container, tabId) {

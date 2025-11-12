@@ -1561,6 +1561,116 @@ body.role-customer .fab {
     color: var(--tg-theme-button-text-color);
 }
 
+/* === PHOTO DISPLAY === */
+.photos-section {
+    border-top: 1px solid var(--separator-color);
+    padding-top: 15px;
+}
+
+.photo-stage {
+    margin-bottom: 15px;
+}
+
+.photo-stage:last-child {
+    margin-bottom: 0;
+}
+
+.photo-stage-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--tg-theme-text-color);
+    margin-bottom: 10px;
+}
+
+.photo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.photo-thumbnail {
+    width: 100%;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+.photo-thumbnail:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+.photo-thumbnail:active {
+    transform: scale(0.95);
+}
+
+/* Photo modal */
+.photo-modal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.photo-modal-content {
+    position: relative;
+    max-width: 90%;
+    max-height: 90%;
+    animation: zoomIn 0.2s ease;
+}
+
+@keyframes zoomIn {
+    from { transform: scale(0.8); }
+    to { transform: scale(1); }
+}
+
+.photo-modal-content img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+
+.photo-modal-close {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    color: #ffffff;
+    font-size: 35px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s;
+    line-height: 1;
+}
+
+.photo-modal-close:hover,
+.photo-modal-close:focus {
+    color: #cccccc;
+}
+
+/* Disabled slide-to-confirm */
+.slide-to-confirm.disabled {
+    background: rgba(128, 128, 128, 0.1);
+    cursor: not-allowed;
+}
+
+.slide-to-confirm.disabled .slide-track {
+    color: var(--tg-theme-hint-color);
+}
+
 /* === RESPONSIVE === */
 @media (min-width: 768px) {
     .modal-content {
@@ -1570,5 +1680,15 @@ body.role-customer .fab {
     
     .badges-grid {
         grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .photo-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .photo-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
