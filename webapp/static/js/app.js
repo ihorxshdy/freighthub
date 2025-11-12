@@ -2123,12 +2123,9 @@ async function loadChatMessages(orderId, scrollToBottom = true) {
         
         container.innerHTML = data.messages.map(msg => `
             <div class="chat-message ${msg.is_mine ? 'mine' : 'theirs'}">
-                <div class="chat-message-bubble">
-                    ${escapeHtml(msg.message_text)}
-                </div>
-                <div class="chat-message-time">
-                    ${formatDateTime(msg.created_at)}
-                </div>
+                <div class="chat-message-header">${msg.sender_role === 'driver' ? '🚛 Водитель' : '👤 Заказчик'}</div>
+                <div class="chat-message-bubble">${escapeHtml(msg.message_text)}</div>
+                <div class="chat-message-time">${formatDateTime(msg.created_at)}</div>
             </div>
         `).join('');
         
