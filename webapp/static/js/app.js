@@ -657,48 +657,77 @@ function initNavMenu() {
     navMenu.innerHTML = '';
     tabContent.innerHTML = '';
     
-    let menuItems = [];
+    let menuGroups = [];
     
     if (currentUser.role === 'customer') {
-        menuItems = [
-            { id: 'searching', label: 'Поиск исполнителей', icon: '◉' },
-            { id: 'created', label: 'Созданные заявки', icon: '○' },
-            { id: 'in_progress', label: 'В процессе', icon: '⟳' },
-            { id: 'closed', label: 'Закрытые', icon: '✓' }
+        menuGroups = [
+            {
+                items: [
+                    { id: 'searching', label: 'Поиск исполнителей', icon: '◉' },
+                    { id: 'created', label: 'Созданные заявки', icon: '○' }
+                ]
+            },
+            {
+                items: [
+                    { id: 'in_progress', label: 'В процессе', icon: '⟳' },
+                    { id: 'closed', label: 'Закрытые', icon: '✓' }
+                ]
+            }
         ];
     } else {
-        menuItems = [
-            { id: 'open', label: 'Открытые заявки', icon: '□' },
-            { id: 'my_bids', label: 'Мои предложения', icon: '▪' },
-            { id: 'in_progress', label: 'В процессе', icon: '⟳' },
-            { id: 'closed', label: 'Завершённые', icon: '✓' }
+        menuGroups = [
+            {
+                items: [
+                    { id: 'open', label: 'Открытые заявки', icon: '□' },
+                    { id: 'my_bids', label: 'Мои предложения', icon: '▪' }
+                ]
+            },
+            {
+                items: [
+                    { id: 'in_progress', label: 'В процессе', icon: '⟳' },
+                    { id: 'closed', label: 'Завершённые', icon: '✓' }
+                ]
+            }
         ];
     }
     
-    menuItems.forEach((item, index) => {
-        // Создаем пункт меню
-        const menuItem = document.createElement('div');
-        menuItem.className = 'menu-item' + (index === 0 ? ' active' : '');
-        menuItem.dataset.tab = item.id;
-        menuItem.innerHTML = `
-            <div class="menu-item-content">
-                <div class="menu-icon">${item.icon}</div>
-                <div class="menu-label">${item.label}</div>
-            </div>
-            <span class="menu-badge" id="badge-${item.id}">0</span>
-        `;
-        menuItem.addEventListener('click', () => switchTab(item.id));
-        navMenu.appendChild(menuItem);
+    let isFirst = true;
+    menuGroups.forEach(group => {
+        // Создаем группу
+        const menuGroup = document.createElement('div');
+        menuGroup.className = 'menu-group';
         
-        // Создаем контент вкладки
-        const tabPane = document.createElement('div');
-        tabPane.className = 'tab-pane' + (index === 0 ? ' active' : '');
-        tabPane.id = `tab-${item.id}`;
-        tabContent.appendChild(tabPane);
+        group.items.forEach(item => {
+            // Создаем пункт меню
+            const menuItem = document.createElement('div');
+            menuItem.className = 'menu-item' + (isFirst ? ' active' : '');
+            menuItem.dataset.tab = item.id;
+            menuItem.innerHTML = `
+                <div class="menu-item-content">
+                    <div class="menu-icon">${item.icon}</div>
+                    <div class="menu-label">${item.label}</div>
+                </div>
+                <span class="menu-badge" id="badge-${item.id}"></span>
+            `;
+            menuItem.addEventListener('click', () => switchTab(item.id));
+            menuGroup.appendChild(menuItem);
+            
+            // Создаем контент вкладки
+            const tabPane = document.createElement('div');
+            tabPane.className = 'tab-pane' + (isFirst ? ' active' : '');
+            tabPane.id = `tab-${item.id}`;
+            tabContent.appendChild(tabPane);
+            
+            if (isFirst) {
+                currentTab = item.id;
+                isFirst = false;
+            }
+        });
+        
+        navMenu.appendChild(menuGroup);
     });
     
     // Загружаем данные для первой вкладки
-    currentTab = menuItems[0].id;
     loadTabData(currentTab);
 }
 
