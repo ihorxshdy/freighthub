@@ -1906,18 +1906,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Upload response:', response.status, response.statusText);
                 
                 if (!response.ok) {
+                    // Читаем тело ответа только один раз
+                    const contentType = response.headers.get('content-type');
                     let errorMsg = 'Ошибка загрузки';
+                    
                     try {
-                        const error = await response.json();
-                        errorMsg = error.error || errorMsg;
-                        console.error('Server error:', error);
+                        if (contentType && contentType.includes('application/json')) {
+                            const error = await response.json();
+                            errorMsg = error.error || errorMsg;
+                            console.error('Server error:', error);
+                        } else {
+                            const text = await response.text();
+                            console.error('Response text:', text);
+                            errorMsg = text || errorMsg;
+                        }
                     } catch (e) {
-                        const text = await response.text();
-                        console.error('Response text:', text);
-                        errorMsg = text || errorMsg;
+                        console.error('Error parsing response:', e);
                     }
                     throw new Error(errorMsg);
                 }
+                
+                // Парсим успешный ответ
+                const result = await response.json();
+                console.log('Upload success:', result);
                 
                 // Успешно загружено
                 alert('Фотографии успешно загружены!');
