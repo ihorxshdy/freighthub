@@ -187,7 +187,8 @@ def setup_photo_routes(app, get_db_connection):
     def get_order_photos(order_id):
         """Получение списка фотографий заказа"""
         print(f"[GET PHOTOS] Order: {order_id}")
-        telegram_id = request.headers.get('telegram_id')
+        # Flask normalizes headers to Title-Case, so we need to use the normalized form
+        telegram_id = request.headers.get('Telegram-Id')
         print(f"[GET PHOTOS] telegram_id from header: {telegram_id}")
         
         if not telegram_id:
@@ -253,7 +254,8 @@ def setup_photo_routes(app, get_db_connection):
     @app.route('/api/photos/<int:photo_id>', methods=['GET'])
     def get_photo(photo_id):
         """Получение файла фотографии"""
-        telegram_id = request.headers.get('telegram_id')
+        # Flask normalizes headers to Title-Case
+        telegram_id = request.headers.get('Telegram-Id')
         if not telegram_id:
             return jsonify({'error': 'telegram_id header required'}), 400
         
