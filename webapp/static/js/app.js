@@ -1120,6 +1120,70 @@ function renderCustomerOrders(orders, container, tabId) {
 }
 
 function renderDriverOrders(orders, container, tabId) {
+    // Для вкладки "Завершённые" добавляем фильтр периода и суммарный заработок
+    if (tabId === 'closed') {
+        const periodFilter = container.querySelector('.period-filter');
+        const earningsDisplay = container.querySelector('.earnings-display');
+        
+        // Если фильтр ещё не создан, создаём его
+        if (!periodFilter) {
+            const filterHtml = `
+                <div class="period-filter" style="padding: 12px 16px; background: var(--tg-theme-bg-color); border-bottom: 1px solid rgba(0,0,0,0.1); margin-bottom: 12px;">
+                    <select id="period-select" class="period-select" style="width: 100%; padding: 8px 12px; border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; font-size: 14px; background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color);">
+                        <option value="all">Весь период</option>
+                        <option value="today">Сегодня</option>
+                        <option value="week">Неделя</option>
+                        <option value="month">Месяц</option>
+                        <option value="custom">Выбрать даты</option>
+                    </select>
+                    <div id="custom-dates" style="display: none; margin-top: 8px; display: flex; gap: 8px;">
+                        <input type="date" id="date-from" style="flex: 1; padding: 8px; border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; font-size: 14px;">
+                        <input type="date" id="date-to" style="flex: 1; padding: 8px; border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; font-size: 14px;">
+                    </div>
+                </div>
+                <div class="earnings-display" style="padding: 12px 16px; background: #f8f9fa; border-bottom: 1px solid rgba(0,0,0,0.1); margin-bottom: 12px;">
+                    <div style="font-size: 13px; color: #666; margin-bottom: 4px;">Заработано за период:</div>
+                    <div id="total-earnings" style="font-size: 20px; font-weight: 600; color: #4CAF50;">0 ₽</div>
+                    <div style="font-size: 12px; color: #999; margin-top: 2px;">Завершено заказов: <span id="completed-count">0</span></div>
+                </div>
+                <div id="orders-container"></div>
+            `;
+            container.innerHTML = filterHtml;
+            
+            // Добавляем обработчик изменения периода
+            const periodSelect = document.getElementById('period-select');
+            const customDates = document.getElementById('custom-dates');
+            const dateFrom = document.getElementById('date-from');
+            const dateTo = document.getElementById('date-to');
+            
+            periodSelect.addEventListener('change', (e) => {
+                if (e.target.value === 'custom') {
+                    customDates.style.display = 'flex';
+                } else {
+                    customDates.style.display = 'none';
+                    applyPeriodFilter(e.target.value);
+                }
+            });
+            
+            dateFrom.addEventListener('change', () => {
+                if (dateFrom.value && dateTo.value) {
+                    applyPeriodFilter('custom', dateFrom.value, dateTo.value);
+                }
+            });
+            
+            dateTo.addEventListener('change', () => {
+                if (dateFrom.value && dateTo.value) {
+                    applyPeriodFilter('custom', dateFrom.value, dateTo.value);
+                }
+            });
+        }
+        
+        // Фильтруем заказы и рендерим
+        const ordersContainer = document.getElementById('orders-container') || container;
+        renderFilteredOrders(orders, ordersContainer, tabId);
+        return;
+    }
+    
     if (!orders || orders.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
@@ -1134,7 +1198,7 @@ function renderDriverOrders(orders, container, tabId) {
         <div class="order-card">
             <div class="order-header">
                 <div class="order-number">Заявка #${order.id}</div>
-                <div class="order-status status-${tabId}">${(tabId === 'closed' || tabId === 'in_progress' || order.status === 'no_offers') ? getDetailedStatus(order) : getStatusLabel(tabId)}</div>
+                <div class="order-status status-${tabId}">${(tabId === 'in_progress' || order.status === 'no_offers') ? getDetailedStatus(order) : getStatusLabel(tabId)}</div>
             </div>
             
             <div class="order-route">
@@ -1157,30 +1221,6 @@ function renderDriverOrders(orders, container, tabId) {
                 ${order.max_price ? `<span>Цена: ${formatPrice(order.max_price)}</span>` : ''}
                 ${order.total_bids ? `<span>${order.total_bids} предложений</span>` : ''}
             </div>
-            
-            ${tabId === 'closed' && order.cancellation_reason ? `
-                <div class="order-comment">
-                    <strong>Причина отмены:</strong> ${order.cancellation_reason}
-                </div>
-            ` : ''}
-            
-            ${tabId === 'closed' && order.status === 'closed' && order.customer_confirmed && order.driver_confirmed && order.customer_id ? `
-                <div id="photos-section-${order.id}" class="photos-section" style="margin-top: 15px;"></div>
-                <div class="order-footer">
-                    <div style="flex: 1;">
-                        <div style="font-size: 14px; color: #666; margin-bottom: 4px;">Заказчик:</div>
-                        <div style="font-weight: 600;">${order.customer_name || 'Заказчик'}</div>
-                        ${order.winning_price ? `<div style="color: #4CAF50; font-weight: 600; margin-top: 4px;">${formatPrice(order.winning_price)}</div>` : ''}
-                    </div>
-                    ${!order.driver_reviewed ? `
-                        <button class="btn btn-small btn-primary" onclick="openReviewModal(${order.id}, ${order.customer_id}, '${(order.customer_name || 'Заказчик').replace(/'/g, "\\'")}', ${order.customer_telegram_id})">
-                            Оценить
-                        </button>
-                    ` : `
-                        <div style="color: #4CAF50; font-size: 12px;">✓ Оценка оставлена</div>
-                    `}
-                </div>
-            ` : ''}
             
             <div class="order-footer">
                 ${order.my_bid_price ? `
@@ -1242,20 +1282,170 @@ function renderDriverOrders(orders, container, tabId) {
     // Инициализируем слайдеры для подтверждения
     initSlideToConfirm();
     
-    // Загружаем фотографии для заказов в работе и завершенных
+    // Загружаем фотографии для заказов в работе
     if (tabId === 'in_progress') {
         orders.forEach(order => {
             if (order.status === 'in_progress') {
                 loadOrderPhotos(order.id);
             }
         });
-    } else if (tabId === 'closed') {
-        orders.forEach(order => {
-            if (order.status === 'closed' && order.customer_confirmed && order.driver_confirmed && order.customer_id) {
-                loadOrderPhotos(order.id);
-            }
-        });
     }
+}
+
+// Глобальные переменные для фильтрации
+let currentPeriod = 'all';
+let customDateFrom = null;
+let customDateTo = null;
+
+// Функция применения фильтра периода
+function applyPeriodFilter(period, dateFrom = null, dateTo = null) {
+    currentPeriod = period;
+    customDateFrom = dateFrom;
+    customDateTo = dateTo;
+    
+    // Перезагружаем данные для вкладки closed
+    if (currentTab === 'closed' && ordersCache) {
+        const ordersContainer = document.getElementById('orders-container');
+        if (ordersContainer) {
+            renderFilteredOrders(ordersCache.closed, ordersContainer, 'closed');
+        }
+    }
+}
+
+// Функция фильтрации заказов по периоду
+function filterOrdersByPeriod(orders) {
+    if (currentPeriod === 'all') {
+        return orders;
+    }
+    
+    const now = new Date();
+    let startDate;
+    
+    switch (currentPeriod) {
+        case 'today':
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            break;
+        case 'week':
+            startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            break;
+        case 'month':
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            break;
+        case 'custom':
+            if (customDateFrom && customDateTo) {
+                const from = new Date(customDateFrom);
+                const to = new Date(customDateTo);
+                to.setHours(23, 59, 59, 999);
+                return orders.filter(order => {
+                    const orderDate = new Date(order.driver_completed_at || order.created_at);
+                    return orderDate >= from && orderDate <= to;
+                });
+            }
+            return orders;
+        default:
+            return orders;
+    }
+    
+    return orders.filter(order => {
+        const orderDate = new Date(order.driver_completed_at || order.created_at);
+        return orderDate >= startDate;
+    });
+}
+
+// Функция расчета суммарного заработка
+function calculateTotalEarnings(orders) {
+    return orders.reduce((total, order) => {
+        if (order.status === 'closed' && order.customer_confirmed && order.driver_confirmed && order.winning_price) {
+            return total + parseFloat(order.winning_price);
+        }
+        return total;
+    }, 0);
+}
+
+// Функция рендеринга отфильтрованных заказов
+function renderFilteredOrders(orders, container, tabId) {
+    const filteredOrders = filterOrdersByPeriod(orders);
+    const totalEarnings = calculateTotalEarnings(filteredOrders);
+    const completedCount = filteredOrders.filter(o => o.status === 'closed' && o.customer_confirmed && o.driver_confirmed).length;
+    
+    // Обновляем заработок
+    const totalEarningsEl = document.getElementById('total-earnings');
+    const completedCountEl = document.getElementById('completed-count');
+    if (totalEarningsEl) {
+        totalEarningsEl.textContent = formatPrice(totalEarnings);
+    }
+    if (completedCountEl) {
+        completedCountEl.textContent = completedCount;
+    }
+    
+    if (!filteredOrders || filteredOrders.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-title">Нет заказов</div>
+                <div class="empty-description">За выбранный период завершенных заказов не найдено</div>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = filteredOrders.map(order => `
+        <div class="order-card">
+            <div class="order-header">
+                <div class="order-number">Заявка #${order.id}</div>
+                <div class="order-status status-${tabId}">${getDetailedStatus(order)}</div>
+            </div>
+            
+            <div class="order-route">
+                <div class="route-point">
+                    <span class="route-icon">▸</span>
+                    <span><strong>Адрес отправки:</strong> ${order.pickup_address}</span>
+                </div>
+                <div class="route-point">
+                    <span class="route-icon">▸</span>
+                    <span><strong>Адрес доставки:</strong> ${order.delivery_address}</span>
+                </div>
+            </div>
+            
+            <div class="order-description"><strong>Описание:</strong> ${order.cargo_description}</div>
+            
+            <div class="order-meta">
+                <span>${getTruckTypeName(order.truck_type)}</span>
+                <span>${formatDate(order.created_at)}</span>
+                ${order.delivery_date ? `<span>Доставка: ${order.delivery_date}</span>` : ''}
+            </div>
+            
+            ${order.cancellation_reason ? `
+                <div class="order-comment">
+                    <strong>Причина отмены:</strong> ${order.cancellation_reason}
+                </div>
+            ` : ''}
+            
+            ${order.status === 'closed' && order.customer_confirmed && order.driver_confirmed && order.customer_id ? `
+                <div id="photos-section-${order.id}" class="photos-section" style="margin-top: 15px;"></div>
+                <div class="order-footer">
+                    <div style="flex: 1;">
+                        <div style="font-size: 14px; color: #666; margin-bottom: 4px;">Заказчик:</div>
+                        <div style="font-weight: 600;">${order.customer_name || 'Заказчик'}</div>
+                        ${order.winning_price ? `<div style="color: #4CAF50; font-weight: 600; margin-top: 4px;">${formatPrice(order.winning_price)}</div>` : ''}
+                    </div>
+                    ${!order.driver_reviewed ? `
+                        <button class="btn btn-small btn-primary" onclick="openReviewModal(${order.id}, ${order.customer_id}, '${(order.customer_name || 'Заказчик').replace(/'/g, "\\'")}', ${order.customer_telegram_id})">
+                            Оценить
+                        </button>
+                    ` : `
+                        <div style="color: #4CAF50; font-size: 12px;">✓ Оценка оставлена</div>
+                    `}
+                </div>
+            ` : ''}
+        </div>
+    `).join('');
+    
+    // Загружаем фотографии для завершенных заказов
+    filteredOrders.forEach(order => {
+        if (order.status === 'closed' && order.customer_confirmed && order.driver_confirmed && order.customer_id) {
+            loadOrderPhotos(order.id);
+        }
+    });
 }
 
 // === МОДАЛЬНЫЕ ОКНА ===
