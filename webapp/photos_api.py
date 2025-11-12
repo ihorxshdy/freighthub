@@ -16,7 +16,12 @@ PHOTOS_DIR = '/app/data/photos'
 
 def allowed_file(filename):
     """Проверка допустимости файла"""
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    if not filename:
+        return True  # Если имени нет, считаем что это фото с камеры
+    if '.' not in filename:
+        return True  # Если нет расширения, тоже разрешаем (фото с камеры)
+    ext = filename.rsplit('.', 1)[1].lower()
+    return ext in ALLOWED_EXTENSIONS
 
 def setup_photo_routes(app, get_db_connection):
     """Регистрация маршрутов для фотографий"""
@@ -99,14 +104,30 @@ def setup_photo_routes(app, get_db_connection):
             photo_ids = []
             
             for file in files:
-                if not file or file.filename == '':
+                if not file:
                     continue
                 
-                if not allowed_file(file.filename):
-                    return jsonify({'error': f'Invalid file type: {file.filename}'}), 400
+                # Проверяем content-type если filename пустой
+                content_type = file.content_type or 'image/jpeg'
+                
+                # Определяем расширение
+                if file.filename and '.' in file.filename:
+                    ext = file.filename.rsplit('.', 1)[1].lower()
+                else:
+                    # Если filename пустой или без расширения, определяем по content_type
+                    ext_map = {
+                        'image/jpeg': 'jpg',
+                        'image/jpg': 'jpg',
+                        'image/png': 'png',
+                        'image/heic': 'heic',
+                        'image/webp': 'webp'
+                    }
+                    ext = ext_map.get(content_type, 'jpg')
+                
+                if ext not in ALLOWED_EXTENSIONS:
+                    return jsonify({'error': f'Invalid file type: {ext}'}), 400
                 
                 # Генерируем уникальное имя файла
-                ext = file.filename.rsplit('.', 1)[1].lower()
                 filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}.{ext}"
                 filepath = os.path.join(order_dir, filename)
                 
