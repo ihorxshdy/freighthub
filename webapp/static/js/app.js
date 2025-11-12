@@ -1039,6 +1039,16 @@ function renderCustomerOrders(orders, container, tabId) {
                 </div>
             ` : ''}
             ${tabId === 'in_progress' && order.status === 'in_progress' ? `
+                <div style="margin-top: 15px; padding: 12px; background: var(--input-bg); border-radius: 8px;">
+                    <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">Статус выполнения:</div>
+                    <div style="font-size: 13px; color: var(--tg-theme-hint-color);">
+                        ${!order.loading_confirmed_at ? '⏳ Водитель готовится к загрузке груза' : 
+                          !order.unloading_confirmed_at ? '🚛 Груз загружен, в пути к месту доставки' :
+                          !order.driver_completed_at ? '📦 Груз доставлен, ожидание подтверждения водителя' :
+                          !order.customer_confirmed ? '✅ Водитель подтвердил выполнение, ожидается ваше подтверждение' :
+                          '✅ Заказ выполнен'}
+                    </div>
+                </div>
                 <div id="photos-section-${order.id}" class="photos-section" style="margin-top: 15px;"></div>
                 <div style="margin-top: 10px;">
                     ${order.customer_confirmed ? `
@@ -1170,7 +1180,7 @@ function renderDriverOrders(orders, container, tabId) {
                         <button class="btn btn-small btn-danger" onclick="cancelOrder(${order.id})" style="width: 100%; margin-top: 10px;">
                             Отменить заказ
                         </button>
-                    ` : order.unloading_confirmed_at ? `
+                    ` : (order.unloading_confirmed_at && !order.driver_completed_at) ? `
                         <div class="slide-to-confirm" id="slide-confirm-driver-${order.id}" data-order-id="${order.id}" data-role="driver">
                             <div class="slide-track">
                                 <span class="slide-text">Проведите для подтверждения</span>
@@ -1182,7 +1192,7 @@ function renderDriverOrders(orders, container, tabId) {
                         <button class="btn btn-small btn-danger" onclick="cancelOrder(${order.id})" style="width: 100%; margin-top: 10px;">
                             Отменить заказ
                         </button>
-                    ` : order.loading_confirmed_at ? `
+                    ` : (order.loading_confirmed_at && !order.unloading_confirmed_at) ? `
                         <button class="btn btn-primary" onclick="openPhotoUploadModal(${order.id}, 'unloading')" style="width: 100%;">
                             📤 Загрузить фото выгрузки
                         </button>
