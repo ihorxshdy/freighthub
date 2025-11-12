@@ -1000,6 +1000,7 @@ function renderCustomerOrders(orders, container, tabId) {
             ` : ''}
             
             ${tabId === 'closed' && order.status === 'closed' && order.customer_confirmed && order.driver_confirmed && order.winner_driver_id ? `
+                <div id="photos-section-${order.id}" class="photos-section" style="margin-top: 15px;"></div>
                 <div class="order-footer">
                     <div style="flex: 1;">
                         <div style="font-size: 14px; color: #666; margin-bottom: 4px;">Исполнитель:</div>
@@ -1086,10 +1087,16 @@ function renderCustomerOrders(orders, container, tabId) {
     // Инициализируем слайдеры для подтверждения
     initSlideToConfirm();
     
-    // Загружаем фотографии для заказов в работе
+    // Загружаем фотографии для заказов в работе и завершенных
     if (tabId === 'in_progress') {
         orders.forEach(order => {
             if (order.status === 'in_progress') {
+                loadOrderPhotos(order.id);
+            }
+        });
+    } else if (tabId === 'closed') {
+        orders.forEach(order => {
+            if (order.status === 'closed' && order.customer_confirmed && order.driver_confirmed && order.winner_driver_id) {
                 loadOrderPhotos(order.id);
             }
         });
@@ -1142,6 +1149,7 @@ function renderDriverOrders(orders, container, tabId) {
             ` : ''}
             
             ${tabId === 'closed' && order.status === 'closed' && order.customer_confirmed && order.driver_confirmed && order.customer_id ? `
+                <div id="photos-section-${order.id}" class="photos-section" style="margin-top: 15px;"></div>
                 <div class="order-footer">
                     <div style="flex: 1;">
                         <div style="font-size: 14px; color: #666; margin-bottom: 4px;">Заказчик:</div>
@@ -1215,10 +1223,16 @@ function renderDriverOrders(orders, container, tabId) {
     // Инициализируем слайдеры для подтверждения
     initSlideToConfirm();
     
-    // Загружаем фотографии для заказов в работе
+    // Загружаем фотографии для заказов в работе и завершенных
     if (tabId === 'in_progress') {
         orders.forEach(order => {
             if (order.status === 'in_progress') {
+                loadOrderPhotos(order.id);
+            }
+        });
+    } else if (tabId === 'closed') {
+        orders.forEach(order => {
+            if (order.status === 'closed' && order.customer_confirmed && order.driver_confirmed && order.customer_id) {
                 loadOrderPhotos(order.id);
             }
         });
