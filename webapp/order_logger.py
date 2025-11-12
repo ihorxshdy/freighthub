@@ -36,43 +36,6 @@ def log_order_change(conn, order_id, user_id, action, description=None,
             user_name = user[1]
             user_role = user[2]
     
-    # Получаем информацию о заказе и сторонах
-    order_info = conn.execute(
-        '''SELECT 
-            o.customer_id,
-            c.telegram_id as customer_telegram_id,
-            c.name as customer_name,
-            c.phone_number as customer_phone,
-            o.winner_driver_id,
-            d.telegram_id as driver_telegram_id,
-            d.name as driver_name,
-            d.phone_number as driver_phone
-        FROM orders o
-        LEFT JOIN users c ON o.customer_id = c.id
-        LEFT JOIN users d ON o.winner_driver_id = d.id
-        WHERE o.id = ?''',
-        (order_id,)
-    ).fetchone()
-    
-    customer_id = None
-    customer_telegram_id = None
-    customer_name = None
-    customer_phone = None
-    driver_id = None
-    driver_telegram_id = None
-    driver_name = None
-    driver_phone = None
-    
-    if order_info:
-        customer_id = order_info[0]
-        customer_telegram_id = order_info[1]
-        customer_name = order_info[2]
-        customer_phone = order_info[3]
-        driver_id = order_info[4]
-        driver_telegram_id = order_info[5]
-        driver_name = order_info[6]
-        driver_phone = order_info[7]
-    
     # Получаем IP адрес и User-Agent из запроса (если доступен)
     try:
         ip_address = request.remote_addr if request else None
@@ -86,16 +49,12 @@ def log_order_change(conn, order_id, user_id, action, description=None,
         '''INSERT INTO order_history (
             order_id, user_id, user_telegram_id, user_name, user_role,
             action, field_name, old_value, new_value, description,
-            ip_address, user_agent, created_at,
-            customer_id, customer_telegram_id, customer_name, customer_phone,
-            driver_id, driver_telegram_id, driver_name, driver_phone
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+            ip_address, user_agent, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
         (
             order_id, user_id, user_telegram_id, user_name, user_role,
             action, field_name, old_value, new_value, description,
-            ip_address, user_agent, datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            customer_id, customer_telegram_id, customer_name, customer_phone,
-            driver_id, driver_telegram_id, driver_name, driver_phone
+            ip_address, user_agent, datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         )
     )
     conn.commit()
