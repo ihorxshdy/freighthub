@@ -48,7 +48,7 @@ def setup_review_routes(app, get_db_connection):
             # Проверяем что заказ существует и завершен
             order = conn.execute(
                 'SELECT * FROM orders WHERE id = ? AND status = ?',
-                (data['order_id'], 'completed')
+                (data['order_id'], 'closed')
             ).fetchone()
             
             if not order:
