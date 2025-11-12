@@ -84,31 +84,34 @@ body.theme-dark {
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background: url('/static/images/background.jpg') center/cover no-repeat fixed;
     color: var(--tg-theme-text-color);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     min-height: 100vh;
+    position: relative;
+}
+
+/* Background layer */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('/static/images/background.jpg') center/cover no-repeat;
+    z-index: -1;
 }
 
 /* Dark theme - invert background colors */
 @media (prefers-color-scheme: dark) {
-    body {
-        filter: invert(1) hue-rotate(180deg);
-    }
-    
-    /* Restore original colors for content elements to prevent double inversion */
-    #app > * {
+    body::before {
         filter: invert(1) hue-rotate(180deg);
     }
 }
 
-body.theme-dark {
-    filter: invert(1) hue-rotate(180deg);
-}
-
-body.theme-dark #app > * {
+body.theme-dark::before {
     filter: invert(1) hue-rotate(180deg);
 }
 
