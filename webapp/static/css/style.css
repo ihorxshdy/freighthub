@@ -9,10 +9,10 @@
     --tg-theme-secondary-bg-color: #f5f5f7;
     
     /* Liquid Glass variables */
-    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-bg: rgba(255, 255, 255, 0.65);
     --glass-border: rgba(255, 255, 255, 0.4);
     --glass-shadow: rgba(0, 0, 0, 0.1);
-    --glass-hover: rgba(255, 255, 255, 0.8);
+    --glass-hover: rgba(255, 255, 255, 0.75);
     --gradient-start: rgba(255, 255, 255, 0.15);
     --gradient-end: rgba(255, 255, 255, 0.05);
     
@@ -35,10 +35,10 @@
         --tg-theme-secondary-bg-color: #1c1c1e;
         
         /* Liquid Glass dark theme */
-        --glass-bg: rgba(30, 30, 30, 0.7);
+        --glass-bg: rgba(30, 30, 30, 0.65);
         --glass-border: rgba(255, 255, 255, 0.15);
         --glass-shadow: rgba(0, 0, 0, 0.3);
-        --glass-hover: rgba(40, 40, 40, 0.8);
+        --glass-hover: rgba(40, 40, 40, 0.75);
         --gradient-start: rgba(255, 255, 255, 0.1);
         --gradient-end: rgba(255, 255, 255, 0.02);
         
@@ -60,10 +60,10 @@ body.theme-dark {
     --tg-theme-secondary-bg-color: #1c1c1e;
     
     /* Liquid Glass dark theme */
-    --glass-bg: rgba(30, 30, 30, 0.7);
+    --glass-bg: rgba(30, 30, 30, 0.65);
     --glass-border: rgba(255, 255, 255, 0.15);
     --glass-shadow: rgba(0, 0, 0, 0.3);
-    --glass-hover: rgba(40, 40, 40, 0.8);
+    --glass-hover: rgba(40, 40, 40, 0.75);
     --gradient-start: rgba(255, 255, 255, 0.1);
     --gradient-end: rgba(255, 255, 255, 0.02);
     
@@ -84,18 +84,32 @@ body.theme-dark {
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background: linear-gradient(180deg, 
-        #FFB84D 0%, 
-        #FFA07A 25%,
-        #FF8A80 50%,
-        #9C88FF 75%,
-        #80D8FF 100%);
-    background-attachment: fixed;
+    background: url('/static/images/background.jpg') center/cover no-repeat fixed;
     color: var(--tg-theme-text-color);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     min-height: 100vh;
+}
+
+/* Dark theme - invert background colors */
+@media (prefers-color-scheme: dark) {
+    body {
+        filter: invert(1) hue-rotate(180deg);
+    }
+    
+    /* Restore original colors for content elements to prevent double inversion */
+    #app > * {
+        filter: invert(1) hue-rotate(180deg);
+    }
+}
+
+body.theme-dark {
+    filter: invert(1) hue-rotate(180deg);
+}
+
+body.theme-dark #app > * {
+    filter: invert(1) hue-rotate(180deg);
 }
 
 .screen {
