@@ -1168,28 +1168,28 @@ function renderDriverOrders(orders, container, tabId) {
         // Если фильтр ещё не создан, создаём его
         if (!periodFilter) {
             const filterHtml = `
-                <div class="period-filter" style="padding: 12px 16px; background: var(--tg-theme-bg-color); border-bottom: 1px solid rgba(0,0,0,0.1); margin-bottom: 12px;">
-                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                        <select id="period-select" class="period-select" style="flex: 1; padding: 8px 12px; border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; font-size: 14px; background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color);">
+                <div class="period-filter">
+                    <div class="period-select-wrapper">
+                        <select id="period-select" class="period-select">
                             <option value="all">Весь период</option>
                             <option value="today">Сегодня</option>
                             <option value="week">Неделя</option>
                             <option value="month">Месяц</option>
                             <option value="custom">Выбрать даты</option>
                         </select>
-                        <button onclick="refreshClosedOrders()" style="padding: 8px 16px; border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; background: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color); font-size: 14px; cursor: pointer; white-space: nowrap;">
+                        <button onclick="refreshClosedOrders()" class="btn-refresh">
                             Обновить
                         </button>
                     </div>
-                    <div id="custom-dates" style="display: none; margin-top: 8px; display: flex; gap: 8px;">
-                        <input type="date" id="date-from" style="flex: 1; padding: 8px; border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; font-size: 14px;">
-                        <input type="date" id="date-to" style="flex: 1; padding: 8px; border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; font-size: 14px;">
+                    <div id="custom-dates" class="custom-dates" style="display: none;">
+                        <input type="date" id="date-from">
+                        <input type="date" id="date-to">
                     </div>
                 </div>
-                <div class="earnings-display" style="padding: 12px 16px; background: #f8f9fa; border-bottom: 1px solid rgba(0,0,0,0.1); margin-bottom: 12px;">
-                    <div style="font-size: 13px; color: #666; margin-bottom: 4px;">Заработано за период:</div>
-                    <div id="total-earnings" style="font-size: 20px; font-weight: 600; color: #4CAF50;">0 ₽</div>
-                    <div style="font-size: 12px; color: #999; margin-top: 2px;">Завершено заказов: <span id="completed-count">0</span></div>
+                <div class="earnings-display">
+                    <div class="earnings-label">Заработано за период:</div>
+                    <div id="total-earnings" class="earnings-amount">0 ₽</div>
+                    <div class="earnings-details">Завершено заказов: <span id="completed-count" class="earnings-count">0</span></div>
                 </div>
                 <div id="orders-container"></div>
             `;
