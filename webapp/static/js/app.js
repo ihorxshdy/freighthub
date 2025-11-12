@@ -877,7 +877,7 @@ async function loadOrderPhotos(orderId) {
             return;
         }
 
-        const response = await fetch(`/api/orders/${orderId}/photos`, {
+        const response = await fetch(`${API_BASE}api/orders/${orderId}/photos`, {
             headers: {
                 'telegram_id': telegram_id.toString()
             }
@@ -904,9 +904,9 @@ async function loadOrderPhotos(orderId) {
                     <div class="photo-stage-title">Фото загрузки груза</div>
                     <div class="photo-grid">
                         ${photos.loading.map(photo => `
-                            <img src="/api/photos/${photo.id}" 
+                            <img src="${API_BASE}api/photos/${photo.id}" 
                                  class="photo-thumbnail" 
-                                 onclick="openPhotoModal('/api/photos/${photo.id}')"
+                                 onclick="openPhotoModal('${API_BASE}api/photos/${photo.id}')"
                                  alt="Фото загрузки">
                         `).join('')}
                     </div>
@@ -921,9 +921,9 @@ async function loadOrderPhotos(orderId) {
                     <div class="photo-stage-title">Фото выгрузки груза</div>
                     <div class="photo-grid">
                         ${photos.unloading.map(photo => `
-                            <img src="/api/photos/${photo.id}" 
+                            <img src="${API_BASE}api/photos/${photo.id}" 
                                  class="photo-thumbnail" 
-                                 onclick="openPhotoModal('/api/photos/${photo.id}')"
+                                 onclick="openPhotoModal('${API_BASE}api/photos/${photo.id}')"
                                  alt="Фото выгрузки">
                         `).join('')}
                     </div>
@@ -1895,7 +1895,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const telegram_id = window.Telegram.WebApp.initDataUnsafe.user?.id;
                 console.log('Uploading photos:', {orderId, photoType, telegram_id, filesCount: selectedPhotos.length});
                 
-                const response = await fetch(`/api/orders/${orderId}/photos/${photoType}`, {
+                const response = await fetch(`${API_BASE}api/orders/${orderId}/photos/${photoType}`, {
                     method: 'POST',
                     headers: {
                         'telegram_id': telegram_id.toString()
