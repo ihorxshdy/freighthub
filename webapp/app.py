@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 from truck_config import TRUCK_CATEGORIES, DATABASE_PATH, SECRET_KEY
 from webhook_client import notify_new_order  # Webhook уведомления
 from reviews_api import setup_review_routes  # Расширенная система отзывов
+from photos_api import setup_photo_routes  # Фотофиксация этапов доставки
 
 app = Flask(__name__)
 CORS(app)
@@ -619,7 +620,10 @@ def confirm_order_completion(order_id):
                   c.telegram_id as customer_telegram_id,
                   d.telegram_id as driver_telegram_id,
                   d.name as driver_name,
-                  c.name as customer_name
+                  c.name as customer_name,
+                  o.loading_confirmed_at,
+                  o.unloading_confirmed_at,
+                  o.driver_completed_at
            FROM orders o
            JOIN users c ON o.customer_id = c.id
            LEFT JOIN users d ON o.winner_driver_id = d.id
@@ -643,19 +647,33 @@ def confirm_order_completion(order_id):
         conn.close()
         return jsonify({'error': 'You are not a participant of this order'}), 403
     
-    # Обновляем подтверждение
-    if is_customer:
+    # Проверяем условия для подтверждения
+    if is_driver:
+        # Водитель может подтвердить только после выгрузки
+        if not order['unloading_confirmed_at']:
+            conn.close()
+            return jsonify({'error': 'Cannot confirm completion. Please upload unloading photos first'}), 400
+        
+        # Устанавливаем driver_completed_at при первом подтверждении водителя
+        conn.execute(
+            'UPDATE orders SET driver_confirmed = TRUE, driver_completed_at = CURRENT_TIMESTAMP WHERE id = ?',
+            (order_id,)
+        )
+        confirmer_role = 'driver'
+        other_telegram_id = order['customer_telegram_id']
+        other_name = order['customer_name']
+        user_id = order['winner_driver_id']
+    else:
+        # Заказчик может подтвердить только после подтверждения водителя
+        if not order['driver_completed_at']:
+            conn.close()
+            return jsonify({'error': 'Cannot confirm completion. Driver must confirm first'}), 400
+        
         conn.execute('UPDATE orders SET customer_confirmed = TRUE WHERE id = ?', (order_id,))
         confirmer_role = 'customer'
         other_telegram_id = order['driver_telegram_id']
         other_name = order['driver_name']
         user_id = order['customer_id']
-    else:
-        conn.execute('UPDATE orders SET driver_confirmed = TRUE WHERE id = ?', (order_id,))
-        confirmer_role = 'driver'
-        other_telegram_id = order['customer_telegram_id']
-        other_name = order['customer_name']
-        user_id = order['winner_driver_id']
     
     conn.commit()
     
@@ -1266,6 +1284,9 @@ def get_all_orders_with_history():
 
 # Подключаем расширенную систему отзывов
 setup_review_routes(app, get_db_connection)
+
+# Подключаем систему фотофиксации этапов доставки
+setup_photo_routes(app, get_db_connection)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
