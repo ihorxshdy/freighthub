@@ -186,8 +186,12 @@ def setup_photo_routes(app, get_db_connection):
     @app.route('/api/orders/<int:order_id>/photos', methods=['GET'])
     def get_order_photos(order_id):
         """Получение списка фотографий заказа"""
+        print(f"[GET PHOTOS] Order: {order_id}")
         telegram_id = request.headers.get('telegram_id')
+        print(f"[GET PHOTOS] telegram_id from header: {telegram_id}")
+        
         if not telegram_id:
+            print("[GET PHOTOS] ERROR: No telegram_id")
             return jsonify({'error': 'telegram_id header required'}), 400
         
         telegram_id = int(telegram_id)

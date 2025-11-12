@@ -873,9 +873,11 @@ async function loadOrderPhotos(orderId) {
     try {
         const telegram_id = window.Telegram.WebApp.initDataUnsafe.user?.id;
         if (!telegram_id) {
-            console.error('User ID not available');
+            console.error('[LOAD PHOTOS] User ID not available');
             return;
         }
+
+        console.log(`[LOAD PHOTOS] Loading photos for order ${orderId}, user ${telegram_id}`);
 
         const response = await fetch(`${API_BASE}api/orders/${orderId}/photos`, {
             headers: {
@@ -883,12 +885,16 @@ async function loadOrderPhotos(orderId) {
             }
         });
 
+        console.log(`[LOAD PHOTOS] Response status: ${response.status}`);
+
         if (!response.ok) {
-            console.error('Failed to fetch photos');
+            const errorText = await response.text();
+            console.error(`[LOAD PHOTOS] Failed to fetch photos: ${response.status} - ${errorText}`);
             return;
         }
 
         const photos = await response.json();
+        console.log(`[LOAD PHOTOS] Received photos:`, photos);
         const container = document.getElementById(`photos-section-${orderId}`);
         
         if (!container) {
