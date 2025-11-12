@@ -1889,8 +1889,13 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const telegram_id = window.Telegram.WebApp.initDataUnsafe.user?.id;
                 
+                console.log('=== PHOTO UPLOAD DEBUG ===');
+                console.log('Telegram WebApp data:', window.Telegram.WebApp.initDataUnsafe);
+                console.log('User ID:', telegram_id);
+                console.log('User ID type:', typeof telegram_id);
+                
                 if (!telegram_id) {
-                    alert('Ошибка: не удалось получить ID пользователя');
+                    alert('Ошибка: не удалось получить ID пользователя. Данные: ' + JSON.stringify(window.Telegram.WebApp.initDataUnsafe));
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Загрузить';
                     return;
@@ -1904,17 +1909,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 // Добавляем telegram_id в FormData как запасной вариант
-                formData.append('telegram_id', telegram_id.toString());
+                const telegramIdStr = telegram_id.toString();
+                formData.append('telegram_id', telegramIdStr);
+                console.log('FormData telegram_id:', telegramIdStr);
+                
+                const headers = {
+                    'telegram_id': telegramIdStr
+                };
+                console.log('Request headers:', headers);
+                console.log('Request URL:', `${API_BASE}api/orders/${orderId}/photos/${photoType}`);
                 
                 const response = await fetch(`${API_BASE}api/orders/${orderId}/photos/${photoType}`, {
                     method: 'POST',
-                    headers: {
-                        'telegram_id': telegram_id.toString()
-                    },
+                    headers: headers,
                     body: formData
                 });
                 
                 console.log('Upload response:', response.status, response.statusText);
+                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
                 
                 if (!response.ok) {
                     // Читаем тело ответа только один раз
