@@ -74,11 +74,6 @@ def view_history():
     """Административная панель истории изменений всех заказов"""
     return render_template('history_admin.html')
 
-@app.route('/create-review')
-def create_review_page():
-    """Страница создания детального отзыва"""
-    return render_template('create_review.html')
-
 # === API ENDPOINTS ===
 
 @app.route('/api/user', methods=['GET'])
@@ -498,6 +493,7 @@ def get_driver_orders():
         '''SELECT o.*, b.price as my_bid_price,
                   u.name as customer_name,
                   u.id as customer_id,
+                  u.telegram_id as customer_telegram_id,
                   o.customer_confirmed,
                   o.driver_confirmed,
                   o.cancelled_by,

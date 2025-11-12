@@ -445,20 +445,29 @@ async function fetchUserReviews(telegramId) {
     }
 }
 
-async function submitReview(orderId, revieweeId, rating, comment) {
-    const response = await fetchWithTimeout(`${API_BASE}api/reviews?telegram_id=${currentUser.telegram_id}`, {
+async function submitReview(orderId, revieweeTelegramId, rating, comment, detailedRatings, badges) {
+    const response = await fetchWithTimeout(`${API_BASE}api/reviews/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             order_id: orderId,
-            reviewee_id: revieweeId,
+            reviewer_telegram_id: currentUser.telegram_id,
+            reviewee_telegram_id: revieweeTelegramId,
             rating: rating,
-            comment: comment
+            comment: comment,
+            punctuality_rating: detailedRatings.punctuality || null,
+            quality_rating: detailedRatings.quality || null,
+            professionalism_rating: detailedRatings.professionalism || null,
+            communication_rating: detailedRatings.communication || null,
+            vehicle_condition_rating: detailedRatings.vehicle || null,
+            badges: badges,
+            is_public: true
         })
     }, 15000);
     
     if (!response.ok) {
-        throw new Error('Ошибка отправки отзыва');
+        const error = await response.json();
+        throw new Error(error.error || 'Ошибка отправки отзыва');
     }
     
     return await response.json();
@@ -911,7 +920,7 @@ function renderCustomerOrders(orders, container, tabId) {
                         ${order.winning_price ? `<div style="color: #4CAF50; font-weight: 600; margin-top: 4px;">${formatPrice(order.winning_price)}</div>` : ''}
                     </div>
                     ${!order.customer_reviewed ? `
-                        <button class="btn btn-small btn-primary" onclick="openReviewModal(${order.id}, ${order.winner_driver_id}, '${(order.driver_name || 'Водитель').replace(/'/g, "\\'")}')">
+                        <button class="btn btn-small btn-primary" onclick="openReviewModal(${order.id}, ${order.winner_driver_id}, '${(order.driver_name || 'Водитель').replace(/'/g, "\\'")}', ${order.winner_telegram_id})">
                             Оценить
                         </button>
                     ` : `
@@ -1027,7 +1036,7 @@ function renderDriverOrders(orders, container, tabId) {
                         ${order.winning_price ? `<div style="color: #4CAF50; font-weight: 600; margin-top: 4px;">${formatPrice(order.winning_price)}</div>` : ''}
                     </div>
                     ${!order.driver_reviewed ? `
-                        <button class="btn btn-small btn-primary" onclick="openReviewModal(${order.id}, ${order.customer_id}, '${(order.customer_name || 'Заказчик').replace(/'/g, "\\'")}')">
+                        <button class="btn btn-small btn-primary" onclick="openReviewModal(${order.id}, ${order.customer_id}, '${(order.customer_name || 'Заказчик').replace(/'/g, "\\'")}', ${order.customer_telegram_id})">
                             Оценить
                         </button>
                     ` : `
@@ -1217,7 +1226,52 @@ function initModals() {
     const cancelReviewBtn = document.getElementById('cancel-review');
     const ratingStars = document.querySelectorAll('.rating-star');
     
-    // Обработчики для звёзд рейтинга
+    // Состояние для детальных оценок и комплиментов
+    let detailedRatings = {
+        punctuality: 0,
+        quality: 0,
+        professionalism: 0,
+        communication: 0,
+        vehicle: 0
+    };
+    let selectedBadges = [];
+    
+    // Загрузка комплиментов
+    async function loadBadges() {
+        try {
+            const response = await fetch(`${API_BASE}api/reviews/badges`);
+            const data = await response.json();
+            
+            const badgesGrid = document.getElementById('badges-grid');
+            badgesGrid.innerHTML = data.badges.map(badge => `
+                <div class="badge-item" data-badge="${badge.id}">
+                    <div class="badge-emoji">${badge.label.split(' ')[0]}</div>
+                    <div class="badge-label">${badge.label.split(' ').slice(1).join(' ')}</div>
+                </div>
+            `).join('');
+            
+            // Обработчики для комплиментов
+            document.querySelectorAll('.badge-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const badge = item.dataset.badge;
+                    item.classList.toggle('selected');
+                    
+                    if (selectedBadges.includes(badge)) {
+                        selectedBadges = selectedBadges.filter(b => b !== badge);
+                    } else {
+                        selectedBadges.push(badge);
+                    }
+                });
+            });
+        } catch (error) {
+            console.error('Error loading badges:', error);
+        }
+    }
+    
+    // Загружаем комплименты при загрузке
+    loadBadges();
+    
+    // Обработчики для основного рейтинга
     ratingStars.forEach(star => {
         star.addEventListener('click', () => {
             const rating = parseInt(star.dataset.rating);
@@ -1230,11 +1284,34 @@ function initModals() {
         });
     });
     
+    // Обработчики для детальных критериев
+    document.querySelectorAll('.rating-input-small').forEach(container => {
+        const criteria = container.dataset.criteria;
+        const stars = container.querySelectorAll('.rating-star-small');
+        
+        stars.forEach(star => {
+            star.addEventListener('click', () => {
+                const value = parseInt(star.dataset.value);
+                detailedRatings[criteria] = value;
+                document.getElementById(`${criteria}-rating`).value = value;
+                
+                stars.forEach(s => {
+                    const starValue = parseInt(s.dataset.value);
+                    s.classList.toggle('active', starValue <= value);
+                });
+            });
+        });
+    });
+    
     if (cancelReviewBtn) {
         cancelReviewBtn.addEventListener('click', () => {
             reviewModal.classList.add('hidden');
             reviewForm.reset();
             ratingStars.forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.rating-star-small').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.badge-item').forEach(b => b.classList.remove('selected'));
+            detailedRatings = { punctuality: 0, quality: 0, professionalism: 0, communication: 0, vehicle: 0 };
+            selectedBadges = [];
         });
     }
     
@@ -1243,24 +1320,28 @@ function initModals() {
             e.preventDefault();
             
             const orderId = parseInt(document.getElementById('review-order-id').value);
-            const revieweeId = parseInt(document.getElementById('review-user-id').value);
+            const revieweeTelegramId = parseInt(document.getElementById('review-reviewee-telegram-id').value);
             const rating = parseInt(document.getElementById('rating-value').value);
             const comment = document.getElementById('review-comment').value;
             
             if (!rating) {
-                showError('Пожалуйста, выберите оценку');
+                showError('Пожалуйста, выберите общую оценку');
                 return;
             }
             
             try {
-                await submitReview(orderId, revieweeId, rating, comment);
+                await submitReview(orderId, revieweeTelegramId, rating, comment, detailedRatings, selectedBadges);
                 reviewModal.classList.add('hidden');
                 reviewForm.reset();
                 ratingStars.forEach(s => s.classList.remove('active'));
+                document.querySelectorAll('.rating-star-small').forEach(s => s.classList.remove('active'));
+                document.querySelectorAll('.badge-item').forEach(b => b.classList.remove('selected'));
+                detailedRatings = { punctuality: 0, quality: 0, professionalism: 0, communication: 0, vehicle: 0 };
+                selectedBadges = [];
                 showSuccess('Спасибо за ваш отзыв!');
                 refreshOrders();
             } catch (error) {
-                showError('Ошибка отправки отзыва');
+                showError(error.message || 'Ошибка отправки отзыва');
             }
         });
     }
@@ -1610,16 +1691,24 @@ function contactAdmin() {
 }
 
 // Открыть модальное окно для оценки пользователя
-window.openReviewModal = function(orderId, userId, userName) {
+window.openReviewModal = function(orderId, userId, userName, userTelegramId) {
     const modal = document.getElementById('review-modal');
     document.getElementById('review-order-id').value = orderId;
     document.getElementById('review-user-id').value = userId;
+    document.getElementById('review-reviewee-telegram-id').value = userTelegramId || userId;
     document.getElementById('review-user-name').textContent = userName;
     
-    // Сбросить звёзды
+    // Сбросить все оценки
     document.querySelectorAll('.rating-star').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.rating-star-small').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.badge-item').forEach(b => b.classList.remove('selected'));
     document.getElementById('rating-value').value = '';
     document.getElementById('review-comment').value = '';
+    
+    // Сбросить скрытые поля детальных критериев
+    ['punctuality', 'quality', 'professionalism', 'communication', 'vehicle'].forEach(criteria => {
+        document.getElementById(`${criteria}-rating`).value = '';
+    });
     
     modal.classList.remove('hidden');
 };
