@@ -1288,7 +1288,11 @@ function initModals() {
             star.addEventListener('click', () => {
                 const value = parseInt(star.dataset.value);
                 detailedRatings[criteria] = value;
-                document.getElementById(`${criteria}-rating`).value = value;
+                
+                const ratingInput = document.getElementById(`${criteria}-rating`);
+                if (ratingInput) {
+                    ratingInput.value = value;
+                }
                 
                 stars.forEach(s => {
                     const starValue = parseInt(s.dataset.value);
@@ -1687,7 +1691,12 @@ function contactAdmin() {
 
 // Открыть модальное окно для оценки пользователя
 window.openReviewModal = function(orderId, userId, userName, userTelegramId) {
+    console.log('Opening review modal:', { orderId, userId, userName, userTelegramId });
     const modal = document.getElementById('review-modal');
+    if (!modal) {
+        console.error('Review modal not found!');
+        return;
+    }
     document.getElementById('review-order-id').value = orderId;
     document.getElementById('review-user-id').value = userId;
     document.getElementById('review-reviewee-telegram-id').value = userTelegramId || userId;
@@ -1700,10 +1709,11 @@ window.openReviewModal = function(orderId, userId, userName, userTelegramId) {
     document.getElementById('rating-value').value = '';
     document.getElementById('review-comment').value = '';
     
-    // Сбросить скрытые поля детальных критериев
-    ['punctuality', 'quality', 'professionalism', 'communication', 'vehicle'].forEach(criteria => {
-        document.getElementById(`${criteria}-rating`).value = '';
-    });
+    // Сбросить скрытое поле профессионализма
+    const professionalismRating = document.getElementById('professionalism-rating');
+    if (professionalismRating) {
+        professionalismRating.value = '';
+    }
     
     modal.classList.remove('hidden');
 };
