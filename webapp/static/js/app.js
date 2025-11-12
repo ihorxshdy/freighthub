@@ -896,8 +896,10 @@ async function loadOrderPhotos(orderId) {
         const photos = await response.json();
         console.log(`[LOAD PHOTOS] Received photos:`, photos);
         const container = document.getElementById(`photos-section-${orderId}`);
+        console.log(`[LOAD PHOTOS] Container for order ${orderId}:`, container);
         
         if (!container) {
+            console.error(`[LOAD PHOTOS] Container photos-section-${orderId} not found!`);
             return;
         }
 
@@ -937,9 +939,12 @@ async function loadOrderPhotos(orderId) {
             `;
         }
 
+        console.log(`[LOAD PHOTOS] Generated HTML length: ${html.length} chars`);
+        console.log(`[LOAD PHOTOS] HTML preview:`, html.substring(0, 200));
         container.innerHTML = html;
+        console.log(`[LOAD PHOTOS] HTML injected into container`);
     } catch (error) {
-        console.error('Error loading order photos:', error);
+        console.error('[LOAD PHOTOS] Error loading order photos:', error);
     }
 }
 
