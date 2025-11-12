@@ -1893,6 +1893,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 const telegram_id = window.Telegram.WebApp.initDataUnsafe.user?.id;
+                console.log('Uploading photos:', {orderId, photoType, telegram_id, filesCount: selectedPhotos.length});
+                
                 const response = await fetch(`/api/orders/${orderId}/photos/${photoType}`, {
                     method: 'POST',
                     headers: {
@@ -1901,9 +1903,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     body: formData
                 });
                 
+                console.log('Upload response:', response.status, response.statusText);
+                
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Ошибка загрузки');
+                    let errorMsg = 'Ошибка загрузки';
+                    try {
+                        const error = await response.json();
+                        errorMsg = error.error || errorMsg;
+                        console.error('Server error:', error);
+                    } catch (e) {
+                        const text = await response.text();
+                        console.error('Response text:', text);
+                        errorMsg = text || errorMsg;
+                    }
+                    throw new Error(errorMsg);
                 }
                 
                 // Успешно загружено
