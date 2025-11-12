@@ -1182,12 +1182,17 @@ function renderDriverOrders(orders, container, tabId) {
                         <button class="btn btn-small btn-danger" onclick="cancelOrder(${order.id})" style="width: 100%; margin-top: 10px;">
                             Отменить заказ
                         </button>
+                    ` : order.loading_confirmed_at ? `
+                        <button class="btn btn-primary" onclick="openPhotoUploadModal(${order.id}, 'unloading')" style="width: 100%;">
+                            📤 Загрузить фото выгрузки
+                        </button>
+                        <button class="btn btn-small btn-danger" onclick="cancelOrder(${order.id})" style="width: 100%; margin-top: 10px;">
+                            Отменить заказ
+                        </button>
                     ` : `
-                        <div class="slide-to-confirm disabled">
-                            <div class="slide-track">
-                                <span class="slide-text">Загрузите фото через бот</span>
-                            </div>
-                        </div>
+                        <button class="btn btn-primary" onclick="openPhotoUploadModal(${order.id}, 'loading')" style="width: 100%;">
+                            📦 Загрузить фото загрузки
+                        </button>
                         <button class="btn btn-small btn-danger" onclick="cancelOrder(${order.id})" style="width: 100%; margin-top: 10px;">
                             Отменить заказ
                         </button>
@@ -1801,6 +1806,154 @@ window.openReviewModal = function(orderId, userId, userName, userTelegramId) {
     document.getElementById('review-comment').value = '';
     
     modal.classList.remove('hidden');
+};
+
+// === ЗАГРУЗКА ФОТО ===
+let selectedPhotos = [];
+
+window.openPhotoUploadModal = function(orderId, photoType) {
+    const modal = document.getElementById('photo-upload-modal');
+    const title = document.getElementById('photo-upload-title');
+    
+    document.getElementById('photo-upload-order-id').value = orderId;
+    document.getElementById('photo-upload-type').value = photoType;
+    
+    title.textContent = photoType === 'loading' ? '📦 Загрузить фото загрузки' : '📤 Загрузить фото выгрузки';
+    
+    // Сброс выбранных фото
+    selectedPhotos = [];
+    document.getElementById('photo-preview-container').innerHTML = '';
+    document.getElementById('submit-photos').disabled = true;
+    
+    modal.classList.remove('hidden');
+};
+
+// Обработчик выбора файлов
+document.addEventListener('DOMContentLoaded', function() {
+    const photoInput = document.getElementById('photo-input');
+    const previewContainer = document.getElementById('photo-preview-container');
+    const submitBtn = document.getElementById('submit-photos');
+    
+    if (photoInput) {
+        photoInput.addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            
+            // Ограничение на 5 фото
+            if (selectedPhotos.length + files.length > 5) {
+                alert('Можно загрузить максимум 5 фотографий');
+                return;
+            }
+            
+            files.forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    selectedPhotos.push(file);
+                    
+                    // Создаем превью
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const preview = document.createElement('div');
+                        preview.className = 'photo-preview-item';
+                        preview.innerHTML = `
+                            <img src="${event.target.result}" alt="Preview">
+                            <button class="photo-remove-btn" onclick="removePhoto(${selectedPhotos.length - 1})">&times;</button>
+                        `;
+                        previewContainer.appendChild(preview);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // Активируем кнопку загрузки
+            submitBtn.disabled = selectedPhotos.length === 0;
+            
+            // Очищаем input для возможности выбрать те же файлы снова
+            photoInput.value = '';
+        });
+    }
+    
+    // Кнопка загрузки
+    if (submitBtn) {
+        submitBtn.addEventListener('click', async function() {
+            const orderId = document.getElementById('photo-upload-order-id').value;
+            const photoType = document.getElementById('photo-upload-type').value;
+            
+            if (selectedPhotos.length === 0) {
+                alert('Выберите хотя бы одно фото');
+                return;
+            }
+            
+            // Показываем индикатор загрузки
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Загрузка...';
+            
+            try {
+                const formData = new FormData();
+                selectedPhotos.forEach(photo => {
+                    formData.append('photos', photo);
+                });
+                
+                const telegram_id = window.Telegram.WebApp.initDataUnsafe.user?.id;
+                const response = await fetch(`/api/orders/${orderId}/photos/${photoType}`, {
+                    method: 'POST',
+                    headers: {
+                        'telegram_id': telegram_id.toString()
+                    },
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Ошибка загрузки');
+                }
+                
+                // Успешно загружено
+                alert('Фотографии успешно загружены!');
+                document.getElementById('photo-upload-modal').classList.add('hidden');
+                
+                // Перезагружаем заказы
+                await loadOrdersForTab();
+                
+            } catch (error) {
+                console.error('Error uploading photos:', error);
+                alert('Ошибка загрузки: ' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Загрузить';
+            }
+        });
+    }
+    
+    // Кнопка отмены
+    const cancelBtn = document.getElementById('cancel-photo-upload');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function() {
+            document.getElementById('photo-upload-modal').classList.add('hidden');
+        });
+    }
+});
+
+window.removePhoto = function(index) {
+    selectedPhotos.splice(index, 1);
+    
+    // Перерисовываем превью
+    const previewContainer = document.getElementById('photo-preview-container');
+    previewContainer.innerHTML = '';
+    
+    selectedPhotos.forEach((file, idx) => {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const preview = document.createElement('div');
+            preview.className = 'photo-preview-item';
+            preview.innerHTML = `
+                <img src="${event.target.result}" alt="Preview">
+                <button class="photo-remove-btn" onclick="removePhoto(${idx})">&times;</button>
+            `;
+            previewContainer.appendChild(preview);
+        };
+        reader.readAsDataURL(file);
+    });
+    
+    // Обновляем состояние кнопки
+    document.getElementById('submit-photos').disabled = selectedPhotos.length === 0;
 };
 
 

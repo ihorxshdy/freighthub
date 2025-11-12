@@ -308,6 +308,36 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Модальное окно загрузки фото -->
+        <div id="photo-upload-modal" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="photo-upload-title">📷 Загрузить фото</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="photo-upload-order-id">
+                    <input type="hidden" id="photo-upload-type">
+                    
+                    <div class="photo-upload-area">
+                        <input type="file" id="photo-input" accept="image/*" multiple capture="environment" style="display: none;">
+                        <button type="button" class="btn btn-primary" onclick="document.getElementById('photo-input').click()" style="width: 100%;">
+                            📸 Выбрать фото
+                        </button>
+                        <div class="photo-upload-hint">Можно выбрать до 5 фотографий</div>
+                    </div>
+                    
+                    <div id="photo-preview-container" class="photo-preview-grid"></div>
+                    
+                    <div class="modal-actions" style="margin-top: 20px;">
+                        <button type="button" class="btn btn-secondary" id="cancel-photo-upload">Отмена</button>
+                        <button type="button" class="btn btn-primary" id="submit-photos" disabled>Загрузить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="static/js/app.js?v={{ version }}"></script>
