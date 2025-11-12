@@ -82,8 +82,13 @@ body.theme-dark {
     box-sizing: border-box;
 }
 
+html {
+    background: transparent;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: transparent;
     color: var(--tg-theme-text-color);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
@@ -100,8 +105,16 @@ body::before {
     left: 0;
     right: 0;
     bottom: 0;
-    background: url('/static/images/background.jpg') center/cover no-repeat;
-    z-index: -1;
+    width: 100vw;
+    height: 100vh;
+    background: url('/static/images/background.jpg?v=2') center center/cover no-repeat;
+    background-attachment: fixed;
+    z-index: 0;
+}
+
+#app {
+    position: relative;
+    z-index: 1;
 }
 
 /* Dark theme - invert background colors */
@@ -119,6 +132,7 @@ body.theme-dark::before {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    background: transparent;
 }
 
 .screen.hidden {
