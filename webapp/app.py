@@ -198,6 +198,9 @@ def get_customer_orders():
                   o.driver_confirmed,
                   o.cancelled_by,
                   o.cancellation_reason,
+                  o.loading_confirmed_at,
+                  o.unloading_confirmed_at,
+                  o.driver_completed_at,
                   (SELECT COUNT(*) FROM reviews WHERE order_id = o.id AND reviewer_id = ?) as customer_reviewed
            FROM orders o
            LEFT JOIN bids b ON o.id = b.order_id
@@ -479,7 +482,8 @@ def get_driver_orders():
     in_progress_orders = conn.execute(
         '''SELECT o.*, b.price as my_bid_price, u.name as customer_name, 
                   u.phone_number as customer_phone, u.telegram_id as customer_telegram_id,
-                  o.customer_confirmed, o.driver_confirmed
+                  o.customer_confirmed, o.driver_confirmed,
+                  o.loading_confirmed_at, o.unloading_confirmed_at, o.driver_completed_at
            FROM orders o
            JOIN bids b ON o.id = b.order_id AND b.driver_id = ?
            JOIN users u ON o.customer_id = u.id

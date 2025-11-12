@@ -1159,6 +1159,7 @@ function renderDriverOrders(orders, container, tabId) {
                 ` : ''}
             </div>
             ${tabId === 'in_progress' ? `
+                <div id="photos-section-${order.id}" class="photos-section" style="margin-top: 15px;"></div>
                 <div style="margin-top: 10px; padding: 0 16px;">
                     ${(order.driver_confirmed === 1 || order.driver_confirmed === true) ? `
                         <div class="slide-to-confirm confirmed">
@@ -1169,13 +1170,22 @@ function renderDriverOrders(orders, container, tabId) {
                         <button class="btn btn-small btn-danger" onclick="cancelOrder(${order.id})" style="width: 100%; margin-top: 10px;">
                             Отменить заказ
                         </button>
-                    ` : `
+                    ` : order.unloading_confirmed_at ? `
                         <div class="slide-to-confirm" id="slide-confirm-driver-${order.id}" data-order-id="${order.id}" data-role="driver">
                             <div class="slide-track">
                                 <span class="slide-text">Проведите для подтверждения</span>
                             </div>
                             <div class="slide-button">
                                 <span class="slide-icon">→</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-small btn-danger" onclick="cancelOrder(${order.id})" style="width: 100%; margin-top: 10px;">
+                            Отменить заказ
+                        </button>
+                    ` : `
+                        <div class="slide-to-confirm disabled">
+                            <div class="slide-track">
+                                <span class="slide-text">Загрузите фото через бот</span>
                             </div>
                         </div>
                         <button class="btn btn-small btn-danger" onclick="cancelOrder(${order.id})" style="width: 100%; margin-top: 10px;">
@@ -1189,6 +1199,15 @@ function renderDriverOrders(orders, container, tabId) {
     
     // Инициализируем слайдеры для подтверждения
     initSlideToConfirm();
+    
+    // Загружаем фотографии для заказов в работе
+    if (tabId === 'in_progress') {
+        orders.forEach(order => {
+            if (order.status === 'in_progress') {
+                loadOrderPhotos(order.id);
+            }
+        });
+    }
 }
 
 // === МОДАЛЬНЫЕ ОКНА ===
