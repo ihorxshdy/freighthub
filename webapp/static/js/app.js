@@ -526,6 +526,10 @@ async function showMainScreen() {
     // Автоматическое обновление данных каждые 30 секунд
     setInterval(() => {
         if (currentTab && !document.hidden) {
+            // Не обновляем вкладку "Завершённые" автоматически, так как это исторические данные
+            if (currentTab === 'closed') {
+                return;
+            }
             // Обновляем только если вкладка активна
             const now = Date.now();
             if (now - ordersCacheTime >= CACHE_DURATION) {
@@ -768,6 +772,13 @@ function refreshOrders() {
     ordersCache = null;
     ordersCacheTime = 0;
     loadTabData(currentTab, true);
+}
+
+// Функция для обновления завершенных заказов (с сохранением фильтра)
+function refreshClosedOrders() {
+    ordersCache = null;
+    ordersCacheTime = 0;
+    loadTabData('closed', true);
 }
 
 function updateBadges(orders) {
@@ -1129,13 +1140,18 @@ function renderDriverOrders(orders, container, tabId) {
         if (!periodFilter) {
             const filterHtml = `
                 <div class="period-filter" style="padding: 12px 16px; background: var(--tg-theme-bg-color); border-bottom: 1px solid rgba(0,0,0,0.1); margin-bottom: 12px;">
-                    <select id="period-select" class="period-select" style="width: 100%; padding: 8px 12px; border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; font-size: 14px; background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color);">
-                        <option value="all">Весь период</option>
-                        <option value="today">Сегодня</option>
-                        <option value="week">Неделя</option>
-                        <option value="month">Месяц</option>
-                        <option value="custom">Выбрать даты</option>
-                    </select>
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                        <select id="period-select" class="period-select" style="flex: 1; padding: 8px 12px; border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; font-size: 14px; background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color);">
+                            <option value="all">Весь период</option>
+                            <option value="today">Сегодня</option>
+                            <option value="week">Неделя</option>
+                            <option value="month">Месяц</option>
+                            <option value="custom">Выбрать даты</option>
+                        </select>
+                        <button onclick="refreshClosedOrders()" style="padding: 8px 16px; border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; background: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color); font-size: 14px; cursor: pointer; white-space: nowrap;">
+                            Обновить
+                        </button>
+                    </div>
                     <div id="custom-dates" style="display: none; margin-top: 8px; display: flex; gap: 8px;">
                         <input type="date" id="date-from" style="flex: 1; padding: 8px; border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; font-size: 14px;">
                         <input type="date" id="date-to" style="flex: 1; padding: 8px; border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; font-size: 14px;">
@@ -1155,6 +1171,14 @@ function renderDriverOrders(orders, container, tabId) {
             const customDates = document.getElementById('custom-dates');
             const dateFrom = document.getElementById('date-from');
             const dateTo = document.getElementById('date-to');
+            
+            // Восстанавливаем сохраненные значения фильтра
+            periodSelect.value = currentPeriod;
+            if (currentPeriod === 'custom' && customDateFrom && customDateTo) {
+                customDates.style.display = 'flex';
+                dateFrom.value = customDateFrom;
+                dateTo.value = customDateTo;
+            }
             
             periodSelect.addEventListener('change', (e) => {
                 if (e.target.value === 'custom') {
