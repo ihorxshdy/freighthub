@@ -455,11 +455,11 @@ async function submitReview(orderId, revieweeTelegramId, rating, comment, detail
             reviewee_telegram_id: revieweeTelegramId,
             rating: rating,
             comment: comment,
-            punctuality_rating: detailedRatings.punctuality || null,
-            quality_rating: detailedRatings.quality || null,
+            punctuality_rating: null,
+            quality_rating: null,
             professionalism_rating: detailedRatings.professionalism || null,
-            communication_rating: detailedRatings.communication || null,
-            vehicle_condition_rating: detailedRatings.vehicle || null,
+            communication_rating: null,
+            vehicle_condition_rating: null,
             badges: badges,
             is_public: true
         })
@@ -1228,11 +1228,7 @@ function initModals() {
     
     // Состояние для детальных оценок и комплиментов
     let detailedRatings = {
-        punctuality: 0,
-        quality: 0,
-        professionalism: 0,
-        communication: 0,
-        vehicle: 0
+        professionalism: 0
     };
     let selectedBadges = [];
     
@@ -1245,8 +1241,7 @@ function initModals() {
             const badgesGrid = document.getElementById('badges-grid');
             badgesGrid.innerHTML = data.badges.map(badge => `
                 <div class="badge-item" data-badge="${badge.id}">
-                    <div class="badge-emoji">${badge.label.split(' ')[0]}</div>
-                    <div class="badge-label">${badge.label.split(' ').slice(1).join(' ')}</div>
+                    <div class="badge-label">${badge.label}</div>
                 </div>
             `).join('');
             
@@ -1310,7 +1305,7 @@ function initModals() {
             ratingStars.forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.rating-star-small').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.badge-item').forEach(b => b.classList.remove('selected'));
-            detailedRatings = { punctuality: 0, quality: 0, professionalism: 0, communication: 0, vehicle: 0 };
+            detailedRatings = { professionalism: 0 };
             selectedBadges = [];
         });
     }
@@ -1336,7 +1331,7 @@ function initModals() {
                 ratingStars.forEach(s => s.classList.remove('active'));
                 document.querySelectorAll('.rating-star-small').forEach(s => s.classList.remove('active'));
                 document.querySelectorAll('.badge-item').forEach(b => b.classList.remove('selected'));
-                detailedRatings = { punctuality: 0, quality: 0, professionalism: 0, communication: 0, vehicle: 0 };
+                detailedRatings = { professionalism: 0 };
                 selectedBadges = [];
                 showSuccess('Спасибо за ваш отзыв!');
                 refreshOrders();
