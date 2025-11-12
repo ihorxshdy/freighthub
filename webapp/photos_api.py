@@ -44,10 +44,12 @@ def setup_photo_routes(app, get_db_connection):
         print(f"[PHOTO UPLOAD] Order: {order_id}, Type: {photo_type}")
         print(f"[PHOTO UPLOAD] Headers: {dict(request.headers)}")
         print(f"[PHOTO UPLOAD] Files: {request.files}")
+        print(f"[PHOTO UPLOAD] Form: {request.form}")
         
-        telegram_id = request.headers.get('telegram_id')
+        # Пытаемся получить telegram_id из заголовков или FormData
+        telegram_id = request.headers.get('telegram_id') or request.form.get('telegram_id')
         if not telegram_id:
-            print("[PHOTO UPLOAD] ERROR: No telegram_id header")
+            print("[PHOTO UPLOAD] ERROR: No telegram_id in headers or form")
             return jsonify({'error': 'telegram_id header required'}), 400
         
         try:

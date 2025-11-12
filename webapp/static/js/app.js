@@ -1887,13 +1887,24 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.textContent = 'Загрузка...';
             
             try {
+                const telegram_id = window.Telegram.WebApp.initDataUnsafe.user?.id;
+                
+                if (!telegram_id) {
+                    alert('Ошибка: не удалось получить ID пользователя');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Загрузить';
+                    return;
+                }
+                
+                console.log('Uploading photos:', {orderId, photoType, telegram_id, filesCount: selectedPhotos.length});
+                
                 const formData = new FormData();
                 selectedPhotos.forEach(photo => {
                     formData.append('photos', photo);
                 });
                 
-                const telegram_id = window.Telegram.WebApp.initDataUnsafe.user?.id;
-                console.log('Uploading photos:', {orderId, photoType, telegram_id, filesCount: selectedPhotos.length});
+                // Добавляем telegram_id в FormData как запасной вариант
+                formData.append('telegram_id', telegram_id.toString());
                 
                 const response = await fetch(`${API_BASE}api/orders/${orderId}/photos/${photoType}`, {
                     method: 'POST',
