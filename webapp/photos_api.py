@@ -170,6 +170,28 @@ def setup_photo_routes(app, get_db_connection):
             
             conn.commit()
             
+            # Отправляем push-уведомление заказчику о загрузке фото
+            try:
+                from webhook_client import notify_photo_uploaded
+                
+                # Получаем telegram_id водителя
+                driver = conn.execute(
+                    'SELECT telegram_id FROM users WHERE id = ?',
+                    (order['winner_driver_id'],)
+                ).fetchone()
+                
+                driver_telegram_id = driver['telegram_id'] if driver else None
+                
+                notify_photo_uploaded(
+                    order_id=order_id,
+                    photo_type=photo_type,
+                    uploader_role='driver',
+                    customer_telegram_id=order['customer_telegram_id'],
+                    driver_telegram_id=driver_telegram_id
+                )
+            except Exception as e:
+                print(f"[PHOTO UPLOAD] Failed to send notification: {e}")
+            
             return jsonify({
                 'success': True,
                 'photo_ids': photo_ids,

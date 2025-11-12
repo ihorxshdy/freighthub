@@ -103,6 +103,29 @@ def notify_auction_bids_ready(order_id, customer_user_id, cargo_description, bid
     })
 
 
+def notify_photo_uploaded(order_id, photo_type, uploader_role, customer_telegram_id, driver_telegram_id):
+    """Уведомить о загрузке фото погрузки/выгрузки"""
+    return send_webhook('/webhook/photo-uploaded', {
+        'order_id': order_id,
+        'photo_type': photo_type,  # 'loading' или 'unloading'
+        'uploader_role': uploader_role,  # 'driver' или 'customer'
+        'customer_telegram_id': customer_telegram_id,
+        'driver_telegram_id': driver_telegram_id
+    })
+
+
+def notify_status_changed(order_id, old_status, new_status, customer_telegram_id, driver_telegram_id, cargo_description):
+    """Уведомить об изменении статуса заказа"""
+    return send_webhook('/webhook/status-changed', {
+        'order_id': order_id,
+        'old_status': old_status,
+        'new_status': new_status,
+        'customer_telegram_id': customer_telegram_id,
+        'driver_telegram_id': driver_telegram_id,
+        'cargo_description': cargo_description
+    })
+
+
 def send_webhook_notification(notification_data):
     """
     Универсальная функция для отправки уведомлений

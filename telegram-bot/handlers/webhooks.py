@@ -403,6 +403,122 @@ async def webhook_new_chat_message(request):
         return web.json_response({'error': str(e)}, status=500)
 
 
+async def webhook_photo_uploaded(request):
+    """Обработчик уведомления о загрузке фото"""
+    try:
+        bot = request.app['bot']
+        data = await request.json()
+        
+        order_id = data.get('order_id')
+        photo_type = data.get('photo_type')  # 'loading' или 'unloading'
+        uploader_role = data.get('uploader_role')
+        customer_telegram_id = data.get('customer_telegram_id')
+        driver_telegram_id = data.get('driver_telegram_id')
+        
+        if not all([order_id, photo_type, uploader_role, customer_telegram_id, driver_telegram_id]):
+            return web.json_response({'error': 'Missing required fields'}, status=400)
+        
+        # Определяем кто загрузил и кому отправлять
+        photo_type_text = "погрузки" if photo_type == "loading" else "выгрузки"
+        uploader_text = "Водитель" if uploader_role == "driver" else "Заказчик"
+        
+        # Отправляем уведомление второй стороне
+        recipient_id = customer_telegram_id if uploader_role == "driver" else driver_telegram_id
+        
+        notification_text = (
+            f"📸 <b>Фото {photo_type_text} загружено</b>\n\n"
+            f"📦 Заказ #{order_id}\n"
+            f"👤 {uploader_text} загрузил фото {photo_type_text}\n\n"
+            f"<i>Откройте заказ для просмотра</i>"
+        )
+        
+        try:
+            await bot.send_message(
+                chat_id=recipient_id,
+                text=notification_text,
+                parse_mode='HTML'
+            )
+            logger.info(f"Photo upload notification sent for order {order_id}")
+        except Exception as e:
+            logger.error(f"Failed to send photo notification: {e}")
+            return web.json_response({'error': f'Failed to send notification: {str(e)}'}, status=500)
+        
+        return web.json_response({'status': 'ok'})
+        
+    except Exception as e:
+        logger.error(f"Webhook photo_uploaded error: {e}")
+        return web.json_response({'error': str(e)}, status=500)
+
+
+async def webhook_status_changed(request):
+    """Обработчик уведомления об изменении статуса заказа"""
+    try:
+        bot = request.app['bot']
+        data = await request.json()
+        
+        order_id = data.get('order_id')
+        old_status = data.get('old_status')
+        new_status = data.get('new_status')
+        customer_telegram_id = data.get('customer_telegram_id')
+        driver_telegram_id = data.get('driver_telegram_id')
+        cargo_description = data.get('cargo_description', '')
+        
+        if not all([order_id, new_status, customer_telegram_id]):
+            return web.json_response({'error': 'Missing required fields'}, status=400)
+        
+        # Словарь статусов для читабельности
+        status_labels = {
+            'auction': 'Поиск исполнителей',
+            'auction_completed': 'Прием заявок завершен',
+            'in_progress': 'В процессе выполнения',
+            'completed': 'Ожидает подтверждения',
+            'closed': 'Завершен',
+            'cancelled': 'Отменен',
+            'no_offers': 'Нет предложений'
+        }
+        
+        new_status_text = status_labels.get(new_status, new_status)
+        cargo_preview = cargo_description[:30] + '...' if len(cargo_description) > 30 else cargo_description
+        
+        # Формируем сообщение
+        notification_text = (
+            f"🔄 <b>Изменение статуса заказа</b>\n\n"
+            f"📦 Заказ #{order_id}\n"
+            f"📝 {cargo_preview}\n"
+            f"📊 Новый статус: <b>{new_status_text}</b>\n\n"
+            f"<i>Откройте приложение для подробностей</i>"
+        )
+        
+        # Отправляем заказчику всегда
+        try:
+            await bot.send_message(
+                chat_id=customer_telegram_id,
+                text=notification_text,
+                parse_mode='HTML'
+            )
+            logger.info(f"Status change notification sent to customer for order {order_id}")
+        except Exception as e:
+            logger.error(f"Failed to send status notification to customer: {e}")
+        
+        # Отправляем водителю если он назначен
+        if driver_telegram_id:
+            try:
+                await bot.send_message(
+                    chat_id=driver_telegram_id,
+                    text=notification_text,
+                    parse_mode='HTML'
+                )
+                logger.info(f"Status change notification sent to driver for order {order_id}")
+            except Exception as e:
+                logger.error(f"Failed to send status notification to driver: {e}")
+        
+        return web.json_response({'status': 'ok'})
+        
+    except Exception as e:
+        logger.error(f"Webhook status_changed error: {e}")
+        return web.json_response({'error': str(e)}, status=500)
+
+
 def setup_webhook_handlers(app, bot: Bot):
     """Настройка обработчиков webhook"""
     app['bot'] = bot
@@ -413,5 +529,7 @@ def setup_webhook_handlers(app, bot: Bot):
     app.router.add_post('/webhook/order-confirmed', webhook_order_confirmed)
     app.router.add_post('/webhook/order-cancelled', webhook_order_cancelled)
     app.router.add_post('/webhook/new-chat-message', webhook_new_chat_message)
+    app.router.add_post('/webhook/photo-uploaded', webhook_photo_uploaded)
+    app.router.add_post('/webhook/status-changed', webhook_status_changed)
     app.router.add_get('/webhook/health', webhook_health)
     logger.info("Webhook handlers настроены")

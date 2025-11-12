@@ -725,6 +725,20 @@ def confirm_order_completion(order_id):
             description='Заказ успешно завершен'
         )
         
+        # Отправляем уведомление об изменении статуса на 'closed'
+        try:
+            from webhook_client import notify_status_changed
+            notify_status_changed(
+                order_id=order_id,
+                old_status='in_progress',
+                new_status='closed',
+                customer_telegram_id=order['customer_telegram_id'],
+                driver_telegram_id=order['driver_telegram_id'],
+                cargo_description=order['cargo_description']
+            )
+        except Exception as e:
+            logger.error(f"Failed to send status change notification: {e}")
+        
         conn.close()
         
         return jsonify({
@@ -858,11 +872,21 @@ def cancel_order(order_id):
     
     # Отправляем уведомление обеим сторонам
     try:
-        from webhook_client import notify_order_cancelled
+        from webhook_client import notify_order_cancelled, notify_status_changed
         notify_order_cancelled(
             order_id=order_id,
             cancelled_by_telegram_id=telegram_id,
             cancelled_by_role='customer' if is_customer else 'driver',
+            customer_telegram_id=order['customer_telegram_id'],
+            driver_telegram_id=order['driver_telegram_id'],
+            cargo_description=order['cargo_description']
+        )
+        
+        # Уведомляем об изменении статуса
+        notify_status_changed(
+            order_id=order_id,
+            old_status='in_progress',
+            new_status=new_status,
             customer_telegram_id=order['customer_telegram_id'],
             driver_telegram_id=order['driver_telegram_id'],
             cargo_description=order['cargo_description']
@@ -968,7 +992,7 @@ def select_auction_winner(order_id):
     
     # Отправляем уведомление выбранному водителю через webhook
     try:
-        from webhook_client import notify_auction_complete
+        from webhook_client import notify_auction_complete, notify_status_changed
         
         notify_auction_complete(
             order_id=order_id,
@@ -982,6 +1006,16 @@ def select_auction_winner(order_id):
             customer_username=customer['username'] if customer and customer['username'] else None,
             customer_phone=customer['phone_number'] if customer else '',
             driver_phone=bid['driver_phone']
+        )
+        
+        # Уведомляем об изменении статуса
+        notify_status_changed(
+            order_id=order_id,
+            old_status=order['status'],
+            new_status='in_progress',
+            customer_telegram_id=telegram_id,
+            driver_telegram_id=bid['driver_telegram_id'],
+            cargo_description=order['cargo_description']
         )
     except Exception as e:
         logger.error(f"Failed to send webhook notification: {e}")
