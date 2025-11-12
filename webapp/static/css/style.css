@@ -1849,27 +1849,38 @@ body.role-customer .fab {
 
 .chat-input-form {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     align-items: flex-end;
 }
 
 .chat-input-form textarea {
     flex: 1;
-    min-height: 40px;
-    max-height: 120px;
-    resize: vertical;
-    border: 1px solid var(--tg-theme-hint-color);
-    border-radius: 20px;
-    padding: 10px 15px;
+    min-height: 38px;
+    max-height: 100px;
+    resize: none;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 18px;
+    padding: 8px 14px;
     font-family: inherit;
-    font-size: 14px;
+    font-size: 15px;
+    line-height: 1.4;
+    overflow-y: auto;
+}
+
+.chat-input-form textarea:focus {
+    outline: none;
+    border-color: var(--tg-theme-button-color);
 }
 
 .btn-send-message {
-    padding: 10px 20px;
-    border-radius: 20px;
+    padding: 8px 16px;
+    border-radius: 18px;
     white-space: nowrap;
-    min-width: 80px;
+    min-width: 70px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .chat-unread-badge {
@@ -1894,10 +1905,24 @@ body.role-customer .fab {
 @media (max-width: 480px) {
     .chat-modal-content {
         max-height: 90vh;
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        border-radius: 0;
     }
     
     .chat-message {
         max-width: 85%;
+    }
+    
+    .chat-input-form textarea {
+        font-size: 16px;
+        padding: 10px 14px;
+    }
+    
+    .btn-send-message {
+        min-width: 60px;
+        padding: 8px 12px;
     }
 }
 
