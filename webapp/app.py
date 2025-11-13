@@ -1344,16 +1344,26 @@ def get_report_stats():
         conn = get_db_connection()
         cursor = conn.cursor()
 
+        # Получаем ID пользователя по telegram_id
+        user = cursor.execute(
+            'SELECT id FROM users WHERE telegram_id = ?',
+            (telegram_id,)
+        ).fetchone()
+        
+        if not user:
+            conn.close()
+            return jsonify({'error': 'User not found'}), 404
+
         # Базовый запрос
         query = """
             SELECT 
                 o.*,
                 u.name as customer_name
             FROM orders o
-            LEFT JOIN users u ON o.customer_id = u.telegram_id
+            LEFT JOIN users u ON o.customer_id = u.id
             WHERE o.customer_id = ?
         """
-        params = [telegram_id]
+        params = [user['id']]
 
         # Фильтр по периоду
         if period == 'today':
@@ -1464,6 +1474,16 @@ def export_report():
         conn = get_db_connection()
         cursor = conn.cursor()
 
+        # Получаем ID пользователя по telegram_id
+        user = cursor.execute(
+            'SELECT id FROM users WHERE telegram_id = ?',
+            (telegram_id,)
+        ).fetchone()
+        
+        if not user:
+            conn.close()
+            return jsonify({'error': 'User not found'}), 404
+
         # Тот же запрос что и в stats
         query = """
             SELECT 
@@ -1471,11 +1491,11 @@ def export_report():
                 u.name as customer_name,
                 d.name as driver_name
             FROM orders o
-            LEFT JOIN users u ON o.customer_id = u.telegram_id
-            LEFT JOIN users d ON o.driver_id = d.telegram_id
+            LEFT JOIN users u ON o.customer_id = u.id
+            LEFT JOIN users d ON o.winner_driver_id = d.id
             WHERE o.customer_id = ?
         """
-        params = [telegram_id]
+        params = [user['id']]
 
         # Применяем те же фильтры
         if period == 'today':
