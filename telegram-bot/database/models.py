@@ -160,11 +160,18 @@ async def get_all_drivers(truck_type: str = None):
     Получить всех водителей
     
     Args:
-        truck_type: Фильтр по типу машины (опционально)
+        truck_type: Фильтр по типу машины (опционально). 
+                   Если указан, вернёт водителей, у которых есть машина этого типа.
     """
     async with aiosqlite.connect(DB_PATH) as db:
         if truck_type:
-            query = "SELECT * FROM users WHERE role = 'driver' AND truck_type = ?"
+            # Ищем водителей через таблицу driver_vehicles
+            query = """
+                SELECT DISTINCT u.* 
+                FROM users u
+                INNER JOIN driver_vehicles dv ON u.id = dv.driver_id
+                WHERE u.role = 'driver' AND dv.truck_type = ?
+            """
             params = (truck_type,)
         else:
             query = "SELECT * FROM users WHERE role = 'driver'"
@@ -177,9 +184,9 @@ async def get_all_drivers(truck_type: str = None):
                 'telegram_id': row[1],
                 'phone_number': row[2],
                 'role': row[3],
-                'truck_type': row[4],
-                'name': row[5],
-                'created_at': row[6]
+                'truck_type': row[4] if len(row) > 4 else None,
+                'name': row[5] if len(row) > 5 else None,
+                'created_at': row[6] if len(row) > 6 else None
             } for row in rows]
 
 async def get_bid_participants(order_id: int):
@@ -205,13 +212,26 @@ async def get_bid_participants(order_id: int):
 
 async def create_user(telegram_id: int, phone_number: str, role: str, truck_type: str = None, name: str = None):
     """Создать нового пользователя"""
+    from datetime import datetime
     async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute(
+        # Создаём пользователя
+        cursor = await db.execute(
             """INSERT INTO users (telegram_id, phone_number, role, truck_type, name) 
                VALUES (?, ?, ?, ?, ?)""",
             (telegram_id, phone_number, role, truck_type, name)
         )
+        user_id = cursor.lastrowid
+        
+        # Если это водитель и указан тип машины, добавляем в driver_vehicles
+        if role == 'driver' and truck_type:
+            await db.execute(
+                """INSERT INTO driver_vehicles (driver_id, truck_type, created_at) 
+                   VALUES (?, ?, ?)""",
+                (user_id, truck_type, datetime.now().isoformat())
+            )
+        
         await db.commit()
+        return user_id
 
 async def create_order(customer_id: int, truck_type: str, cargo_description: str, 
                       delivery_address: str, expires_at: str, pickup_address: str = None,
@@ -232,7 +252,10 @@ async def get_drivers_by_truck_type(truck_type: str):
     """Получить всех водителей с указанным типом машины"""
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute(
-            "SELECT * FROM users WHERE role = 'driver' AND truck_type = ?",
+            """SELECT DISTINCT u.* 
+               FROM users u
+               INNER JOIN driver_vehicles dv ON u.id = dv.driver_id
+               WHERE u.role = 'driver' AND dv.truck_type = ?""",
             (truck_type,)
         ) as cursor:
             rows = await cursor.fetchall()

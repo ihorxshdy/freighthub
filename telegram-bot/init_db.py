@@ -64,12 +64,14 @@ async def init_database():
             CREATE TABLE driver_vehicles (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 driver_id INTEGER NOT NULL,
-                truck_type_id INTEGER NOT NULL,
+                truck_type TEXT NOT NULL,
+                is_primary BOOLEAN DEFAULT FALSE,
                 model TEXT,
                 year INTEGER,
                 license_plate TEXT,
                 created_at TEXT NOT NULL,
-                FOREIGN KEY (driver_id) REFERENCES users (id)
+                FOREIGN KEY (driver_id) REFERENCES users (id),
+                UNIQUE(driver_id, truck_type)
             )
         ''')
         
