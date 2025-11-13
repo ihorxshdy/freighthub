@@ -2799,7 +2799,7 @@ async function exportReport() {
         console.log('Starting report export...');
         
         if (!currentUser || !currentUser.telegram_id) {
-            showNotification('Ошибка: пользователь не авторизован', 'error');
+            showError('Ошибка: пользователь не авторизован');
             return;
         }
 
@@ -2836,10 +2836,10 @@ async function exportReport() {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
 
-        showNotification('Отчёт успешно экспортирован', 'success');
+        showSuccess('Отчёт успешно экспортирован');
     } catch (error) {
         console.error('Ошибка экспорта отчёта:', error);
-        showNotification(`Ошибка экспорта: ${error.message}`, 'error');
+        showError(`Ошибка экспорта: ${error.message}`);
     }
 }
 
