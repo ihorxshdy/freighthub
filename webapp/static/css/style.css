@@ -115,12 +115,9 @@ body.theme-dark {
 #app {
     position: relative;
     min-height: 100vh;
-    background: url('../images/background.jpg?v=4') center center no-repeat;
-    background-size: cover;
-    background-attachment: fixed;
 }
 
-/* Dark theme - invert background colors */
+/* Dark theme backgrounds - handled by body background-image */
 @media (prefers-color-scheme: dark) {
     html {
         background: #000000;
@@ -129,27 +126,10 @@ body.theme-dark {
     body {
         background: #000000;
     }
-    
-    #app {
-        filter: invert(1) hue-rotate(180deg);
-    }
-    
-    /* Restore original colors for content */
-    #app > * {
-        filter: invert(1) hue-rotate(180deg);
-    }
 }
 
 body.theme-dark {
     background: #000000;
-}
-
-body.theme-dark #app {
-    filter: invert(1) hue-rotate(180deg);
-}
-
-body.theme-dark #app > * {
-    filter: invert(1) hue-rotate(180deg);
 }
 
 .screen {
