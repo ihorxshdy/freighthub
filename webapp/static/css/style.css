@@ -34,13 +34,13 @@
         --tg-theme-hint-color: #8e8e93;
         --tg-theme-secondary-bg-color: #1c1c1e;
         
-        /* Liquid Glass dark theme */
-        --glass-bg: rgba(30, 30, 30, 0.65);
-        --glass-border: rgba(255, 255, 255, 0.15);
-        --glass-shadow: rgba(0, 0, 0, 0.3);
-        --glass-hover: rgba(40, 40, 40, 0.75);
-        --gradient-start: rgba(255, 255, 255, 0.1);
-        --gradient-end: rgba(255, 255, 255, 0.02);
+        /* Liquid Glass dark theme - reduced transparency for better readability */
+        --glass-bg: rgba(30, 30, 30, 0.92);
+        --glass-border: rgba(255, 255, 255, 0.2);
+        --glass-shadow: rgba(0, 0, 0, 0.4);
+        --glass-hover: rgba(40, 40, 40, 0.95);
+        --gradient-start: rgba(255, 255, 255, 0.15);
+        --gradient-end: rgba(255, 255, 255, 0.05);
         
         --card-bg: #1c1c1e;
         --separator-color: rgba(255, 255, 255, 0.1);
@@ -59,13 +59,13 @@ body.theme-dark {
     --tg-theme-hint-color: #8e8e93;
     --tg-theme-secondary-bg-color: #1c1c1e;
     
-    /* Liquid Glass dark theme */
-    --glass-bg: rgba(30, 30, 30, 0.65);
-    --glass-border: rgba(255, 255, 255, 0.15);
-    --glass-shadow: rgba(0, 0, 0, 0.3);
-    --glass-hover: rgba(40, 40, 40, 0.75);
-    --gradient-start: rgba(255, 255, 255, 0.1);
-    --gradient-end: rgba(255, 255, 255, 0.02);
+    /* Liquid Glass dark theme - reduced transparency for better readability */
+    --glass-bg: rgba(30, 30, 30, 0.92);
+    --glass-border: rgba(255, 255, 255, 0.2);
+    --glass-shadow: rgba(0, 0, 0, 0.4);
+    --glass-hover: rgba(40, 40, 40, 0.95);
+    --gradient-start: rgba(255, 255, 255, 0.15);
+    --gradient-end: rgba(255, 255, 255, 0.05);
     
     --card-bg: #1c1c1e;
     --separator-color: rgba(255, 255, 255, 0.1);
