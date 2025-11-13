@@ -1322,6 +1322,257 @@ def get_all_orders_with_history():
         logger.error(f"Error fetching all orders with history: {e}")
         return jsonify({'error': 'Failed to fetch orders'}), 500
 
+# ========== REPORTS API ==========
+
+@app.route('/api/reports/stats', methods=['GET'])
+def get_report_stats():
+    """Получение статистики по заказам для отчёта"""
+    try:
+        telegram_id = request.args.get('telegram_id')
+        period = request.args.get('period', 'all')
+        status = request.args.get('status', 'all')
+        pickup_location = request.args.get('pickup_location', 'all')
+        delivery_location = request.args.get('delivery_location', 'all')
+        date_from = request.args.get('date_from')
+        date_to = request.args.get('date_to')
+
+        if not telegram_id:
+            return jsonify({'error': 'telegram_id is required'}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Базовый запрос
+        query = """
+            SELECT 
+                o.*,
+                u.name as customer_name
+            FROM orders o
+            LEFT JOIN users u ON o.customer_id = u.telegram_id
+            WHERE o.customer_id = ?
+        """
+        params = [telegram_id]
+
+        # Фильтр по периоду
+        if period == 'today':
+            query += " AND date(o.created_at) = date('now')"
+        elif period == 'week':
+            query += " AND date(o.created_at) >= date('now', '-7 days')"
+        elif period == 'month':
+            query += " AND date(o.created_at) >= date('now', '-1 month')"
+        elif period == 'custom' and date_from and date_to:
+            query += " AND date(o.created_at) BETWEEN ? AND ?"
+            params.extend([date_from, date_to])
+
+        # Фильтр по статусу
+        if status != 'all':
+            if status == 'no_offers':
+                query += " AND o.status = 'active' AND o.id NOT IN (SELECT order_id FROM bids)"
+            else:
+                query += " AND o.status = ?"
+                params.append(status)
+
+        # Фильтр по месту загрузки
+        if pickup_location != 'all':
+            query += " AND o.pickup_address = ?"
+            params.append(pickup_location)
+
+        # Фильтр по месту доставки
+        if delivery_location != 'all':
+            query += " AND o.delivery_address = ?"
+            params.append(delivery_location)
+
+        query += " ORDER BY o.created_at DESC"
+
+        cursor.execute(query, params)
+        orders = cursor.fetchall()
+
+        # Подсчёт статистики
+        total = len(orders)
+        completed = sum(1 for o in orders if o['status'] == 'closed')
+        cancelled = sum(1 for o in orders if o['status'] == 'cancelled')
+        
+        # Подсчёт заказов без предложений
+        no_offers_count = 0
+        for o in orders:
+            if o['status'] == 'active':
+                cursor.execute("SELECT COUNT(*) as cnt FROM bids WHERE order_id = ?", (o['id'],))
+                bids_count = cursor.fetchone()['cnt']
+                if bids_count == 0:
+                    no_offers_count += 1
+
+        # Подсчёт общих расходов (только завершённые заказы)
+        total_spent = sum(o['winning_price'] or 0 for o in orders if o['status'] == 'closed' and o['winning_price'])
+
+        # Формируем список заказов для отображения
+        orders_list = []
+        for order in orders:
+            orders_list.append({
+                'id': order['id'],
+                'status': order['status'],
+                'created_at': order['created_at'],
+                'pickup_address': order['pickup_address'],
+                'delivery_address': order['delivery_address'],
+                'cargo_description': order['cargo_description'],
+                'truck_type': order['truck_type'],
+                'winning_price': order['winning_price']
+            })
+
+        conn.close()
+
+        return jsonify({
+            'total': total,
+            'completed': completed,
+            'cancelled': cancelled,
+            'no_offers': no_offers_count,
+            'total_spent': total_spent,
+            'orders': orders_list
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting report stats: {e}")
+        return jsonify({'error': 'Failed to get report stats'}), 500
+
+@app.route('/api/reports/export', methods=['GET'])
+def export_report():
+    """Экспорт отчёта в Excel"""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment, PatternFill
+        from flask import send_file
+        from io import BytesIO
+
+        telegram_id = request.args.get('telegram_id')
+        period = request.args.get('period', 'all')
+        status = request.args.get('status', 'all')
+        pickup_location = request.args.get('pickup_location', 'all')
+        delivery_location = request.args.get('delivery_location', 'all')
+        date_from = request.args.get('date_from')
+        date_to = request.args.get('date_to')
+
+        if not telegram_id:
+            return jsonify({'error': 'telegram_id is required'}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Тот же запрос что и в stats
+        query = """
+            SELECT 
+                o.*,
+                u.name as customer_name,
+                d.name as driver_name
+            FROM orders o
+            LEFT JOIN users u ON o.customer_id = u.telegram_id
+            LEFT JOIN users d ON o.driver_id = d.telegram_id
+            WHERE o.customer_id = ?
+        """
+        params = [telegram_id]
+
+        # Применяем те же фильтры
+        if period == 'today':
+            query += " AND date(o.created_at) = date('now')"
+        elif period == 'week':
+            query += " AND date(o.created_at) >= date('now', '-7 days')"
+        elif period == 'month':
+            query += " AND date(o.created_at) >= date('now', '-1 month')"
+        elif period == 'custom' and date_from and date_to:
+            query += " AND date(o.created_at) BETWEEN ? AND ?"
+            params.extend([date_from, date_to])
+
+        if status != 'all':
+            if status == 'no_offers':
+                query += " AND o.status = 'active' AND o.id NOT IN (SELECT order_id FROM bids)"
+            else:
+                query += " AND o.status = ?"
+                params.append(status)
+
+        if pickup_location != 'all':
+            query += " AND o.pickup_address = ?"
+            params.append(pickup_location)
+
+        if delivery_location != 'all':
+            query += " AND o.delivery_address = ?"
+            params.append(delivery_location)
+
+        query += " ORDER BY o.created_at DESC"
+
+        cursor.execute(query, params)
+        orders = cursor.fetchall()
+
+        # Создаём Excel файл
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Отчёт по заказам"
+
+        # Заголовки
+        headers = ['№', 'Дата создания', 'Статус', 'Откуда', 'Куда', 'Груз', 'Тип машины', 'Водитель', 'Стоимость', 'Фото']
+        ws.append(headers)
+
+        # Стилизация заголовков
+        header_fill = PatternFill(start_color="007AFF", end_color="007AFF", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+        
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+
+        # Данные
+        for order in orders:
+            # Получаем фотографии
+            cursor.execute("SELECT photo_url FROM order_photos WHERE order_id = ?", (order['id'],))
+            photos = cursor.fetchall()
+            photo_urls = ', '.join([p['photo_url'] for p in photos]) if photos else 'Нет фото'
+
+            row_data = [
+                order['id'],
+                order['created_at'],
+                order['status'],
+                order['pickup_address'],
+                order['delivery_address'],
+                order['cargo_description'],
+                order['truck_type'],
+                order['driver_name'] or 'Не назначен',
+                order['winning_price'] or 'Не указана',
+                photo_urls
+            ]
+            ws.append(row_data)
+
+        # Автоподбор ширины столбцов
+        for column in ws.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(cell.value)
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+
+        # Сохраняем в память
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        conn.close()
+
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'report_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+        )
+
+    except ImportError:
+        logger.error("openpyxl not installed")
+        return jsonify({'error': 'Excel export not available. Install openpyxl.'}), 500
+    except Exception as e:
+        logger.error(f"Error exporting report: {e}")
+        return jsonify({'error': 'Failed to export report'}), 500
+
 # Подключаем расширенную систему отзывов
 setup_review_routes(app, get_db_connection)
 
@@ -1333,3 +1584,4 @@ setup_chat_routes(app, get_db_connection)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+

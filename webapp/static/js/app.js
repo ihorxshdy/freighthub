@@ -672,6 +672,11 @@ function initNavMenu() {
                     { id: 'in_progress', label: 'В процессе', icon: '⟳' },
                     { id: 'closed', label: 'Закрытые', icon: '✓' }
                 ]
+            },
+            {
+                items: [
+                    { id: 'reports', label: 'Отчёты', icon: '▦' }
+                ]
             }
         ];
     } else {
@@ -748,6 +753,12 @@ async function switchTab(tabId) {
 async function loadTabData(tabId, forceRefresh = false) {
     const tabPane = document.getElementById(`tab-${tabId}`);
     tabPane.innerHTML = '<div class="loading-container"><div class="spinner"></div><p style="margin-top: 10px; color: #666;">Загрузка данных...</p></div>';
+    
+    // Специальная обработка для вкладки отчётов
+    if (tabId === 'reports') {
+        renderReportsTab(tabPane);
+        return;
+    }
     
     try {
         // Проверяем кэш
@@ -2506,5 +2517,293 @@ document.getElementById('chat-message-input')?.addEventListener('input', functio
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 });
+
+// ========== REPORTS FUNCTIONALITY ==========
+
+let reportsFilters = {
+    period: 'all',
+    dateFrom: null,
+    dateTo: null,
+    status: 'all',
+    pickupLocation: 'all',
+    deliveryLocation: 'all'
+};
+
+function renderReportsTab(container) {
+    container.innerHTML = `
+        <div class="reports-filters">
+            <div class="filter-section">
+                <label class="filter-label">Период</label>
+                <div class="filter-row">
+                    <select id="report-period" class="filter-select">
+                        <option value="all">Весь период</option>
+                        <option value="today">Сегодня</option>
+                        <option value="week">Неделя</option>
+                        <option value="month">Месяц</option>
+                        <option value="custom">Выбрать даты</option>
+                    </select>
+                </div>
+                <div id="report-custom-dates" class="custom-dates-row" style="display: none;">
+                    <input type="date" id="report-date-from" class="filter-input">
+                    <span class="date-separator">—</span>
+                    <input type="date" id="report-date-to" class="filter-input">
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <label class="filter-label">Статус заказа</label>
+                <select id="report-status" class="filter-select">
+                    <option value="all">Все статусы</option>
+                    <option value="active">Активные</option>
+                    <option value="in_progress">В процессе</option>
+                    <option value="closed">Завершённые</option>
+                    <option value="cancelled">Отменённые</option>
+                    <option value="no_offers">Без предложений</option>
+                </select>
+            </div>
+
+            <div class="filter-section">
+                <label class="filter-label">Место загрузки</label>
+                <select id="report-pickup" class="filter-select">
+                    <option value="all">Все места</option>
+                    <option value="Металл профиль">Металл профиль</option>
+                    <option value="Взкг">Взкг</option>
+                    <option value="СПК">СПК</option>
+                    <option value="Поревит">Поревит</option>
+                    <option value="Тримет Чекистов">Тримет Чекистов</option>
+                    <option value="Тримет Республики">Тримет Республики</option>
+                    <option value="Урал Интерьер">Урал Интерьер</option>
+                    <option value="Взксм">Взксм</option>
+                    <option value="Строй Двор Гелевка">Строй Двор Гелевка</option>
+                    <option value="Теплотест Чекистов">Теплотест Чекистов</option>
+                    <option value="ТДСК">ТДСК</option>
+                    <option value="ПЖДТ">ПЖДТ</option>
+                    <option value="ЖБИ 1">ЖБИ 1</option>
+                    <option value="ЖБИ 8">ЖБИ 8</option>
+                    <option value="ТЕХНОНИКОЛЬ">ТЕХНОНИКОЛЬ</option>
+                    <option value="Эдельвейс Луговое">Эдельвейс Луговое</option>
+                    <option value="СКМ">СКМ</option>
+                    <option value="Полисервис">Полисервис</option>
+                    <option value="Полимерпласт">Полимерпласт</option>
+                    <option value="Дёке">Дёке</option>
+                    <option value="Технопрофиль">Технопрофиль</option>
+                </select>
+            </div>
+
+            <div class="filter-section">
+                <label class="filter-label">Место доставки</label>
+                <select id="report-delivery" class="filter-select">
+                    <option value="all">Все места</option>
+                    <option value="Антипино">Антипино</option>
+                    <option value="Березняки">Березняки</option>
+                    <option value="Боровое">Боровое</option>
+                    <option value="Боровский">Боровский</option>
+                    <option value="Винзили">Винзили</option>
+                    <option value="Ембаево">Ембаево</option>
+                    <option value="Есаулова">Есаулова</option>
+                    <option value="Казарова">Казарова</option>
+                    <option value="Каменка">Каменка</option>
+                    <option value="КП Пятница">КП Пятница</option>
+                    <option value="Криводанова">Криводанова</option>
+                    <option value="Луговое">Луговое</option>
+                    <option value="Мальково">Мальково</option>
+                    <option value="Падерина">Падерина</option>
+                    <option value="Паренкино">Паренкино</option>
+                    <option value="Перевалова">Перевалова</option>
+                    <option value="Решетникова 1">Решетникова 1</option>
+                    <option value="Решетникова 2">Решетникова 2</option>
+                    <option value="Серебряный бор">Серебряный бор</option>
+                    <option value="Субботино">Субботино</option>
+                    <option value="Ушаково">Ушаково</option>
+                    <option value="Червишево">Червишево</option>
+                    <option value="Чикча">Чикча</option>
+                </select>
+            </div>
+
+            <div class="filter-actions">
+                <button onclick="applyReportFilters()" class="btn-apply-filters">Применить фильтры</button>
+                <button onclick="exportReport()" class="btn-export-report">Экспорт в Excel</button>
+            </div>
+        </div>
+
+        <div id="reports-stats" class="reports-stats">
+            <!-- Статистика будет загружена сюда -->
+        </div>
+
+        <div id="reports-orders" class="reports-orders">
+            <!-- Список заказов будет загружен сюда -->
+        </div>
+    `;
+
+    // Инициализация обработчиков
+    document.getElementById('report-period').addEventListener('change', function() {
+        const customDates = document.getElementById('report-custom-dates');
+        customDates.style.display = this.value === 'custom' ? 'flex' : 'none';
+    });
+
+    // Загружаем начальные данные
+    loadReportStats();
+}
+
+async function loadReportStats() {
+    try {
+        const params = new URLSearchParams({
+            telegram_id: currentUser.telegram_id,
+            period: reportsFilters.period,
+            status: reportsFilters.status,
+            pickup_location: reportsFilters.pickupLocation,
+            delivery_location: reportsFilters.deliveryLocation
+        });
+
+        if (reportsFilters.dateFrom) params.append('date_from', reportsFilters.dateFrom);
+        if (reportsFilters.dateTo) params.append('date_to', reportsFilters.dateTo);
+
+        const response = await fetchWithTimeout(`${API_BASE}api/reports/stats?${params}`, {}, 10000);
+        if (!response.ok) throw new Error('Ошибка загрузки статистики');
+
+        const data = await response.json();
+        renderReportStats(data);
+    } catch (error) {
+        console.error('Ошибка загрузки статистики отчёта:', error);
+        document.getElementById('reports-stats').innerHTML = `
+            <div class="error-message">Ошибка загрузки статистики</div>
+        `;
+    }
+}
+
+function renderReportStats(data) {
+    const statsContainer = document.getElementById('reports-stats');
+    statsContainer.innerHTML = `
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">${data.total || 0}</div>
+                <div class="stat-label">Всего заказов</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${data.completed || 0}</div>
+                <div class="stat-label">Завершено</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${data.cancelled || 0}</div>
+                <div class="stat-label">Отменено</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${data.no_offers || 0}</div>
+                <div class="stat-label">Без предложений</div>
+            </div>
+            <div class="stat-card stat-card-highlight">
+                <div class="stat-value">${formatPrice(data.total_spent || 0)}</div>
+                <div class="stat-label">Общие расходы</div>
+            </div>
+        </div>
+    `;
+
+    // Render orders list
+    const ordersContainer = document.getElementById('reports-orders');
+    if (data.orders && data.orders.length > 0) {
+        ordersContainer.innerHTML = `
+            <div class="reports-orders-title">Список заказов</div>
+            ${data.orders.map(order => `
+                <div class="report-order-card">
+                    <div class="report-order-header">
+                        <span class="report-order-id">Заказ #${order.id}</span>
+                        <span class="report-order-status status-${order.status}">${getStatusText(order.status)}</span>
+                        <span class="report-order-date">${formatDate(order.created_at)}</span>
+                    </div>
+                    <div class="report-order-details">
+                        <div class="report-order-row">
+                            <span class="report-order-label">Маршрут:</span>
+                            <span>${order.pickup_address} → ${order.delivery_address}</span>
+                        </div>
+                        <div class="report-order-row">
+                            <span class="report-order-label">Груз:</span>
+                            <span>${order.cargo_description}</span>
+                        </div>
+                        <div class="report-order-row">
+                            <span class="report-order-label">Тип машины:</span>
+                            <span>${getTruckTypeName(order.truck_type)}</span>
+                        </div>
+                        ${order.winning_price ? `
+                        <div class="report-order-row">
+                            <span class="report-order-label">Стоимость:</span>
+                            <span class="report-order-price">${formatPrice(order.winning_price)}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('')}
+        `;
+    } else {
+        ordersContainer.innerHTML = '<div class="empty-state-small">Нет заказов за выбранный период</div>';
+    }
+}
+
+function applyReportFilters() {
+    const period = document.getElementById('report-period').value;
+    const status = document.getElementById('report-status').value;
+    const pickup = document.getElementById('report-pickup').value;
+    const delivery = document.getElementById('report-delivery').value;
+
+    reportsFilters.period = period;
+    reportsFilters.status = status;
+    reportsFilters.pickupLocation = pickup;
+    reportsFilters.deliveryLocation = delivery;
+
+    if (period === 'custom') {
+        reportsFilters.dateFrom = document.getElementById('report-date-from').value;
+        reportsFilters.dateTo = document.getElementById('report-date-to').value;
+    } else {
+        reportsFilters.dateFrom = null;
+        reportsFilters.dateTo = null;
+    }
+
+    loadReportStats();
+}
+
+async function exportReport() {
+    try {
+        const params = new URLSearchParams({
+            telegram_id: currentUser.telegram_id,
+            period: reportsFilters.period,
+            status: reportsFilters.status,
+            pickup_location: reportsFilters.pickupLocation,
+            delivery_location: reportsFilters.deliveryLocation
+        });
+
+        if (reportsFilters.dateFrom) params.append('date_from', reportsFilters.dateFrom);
+        if (reportsFilters.dateTo) params.append('date_to', reportsFilters.dateTo);
+
+        const response = await fetchWithTimeout(`${API_BASE}api/reports/export?${params}`, {}, 30000);
+        if (!response.ok) throw new Error('Ошибка экспорта отчёта');
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `report_${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        showNotification('Отчёт успешно экспортирован', 'success');
+    } catch (error) {
+        console.error('Ошибка экспорта отчёта:', error);
+        showNotification('Ошибка экспорта отчёта', 'error');
+    }
+}
+
+function getStatusText(status) {
+    const statusMap = {
+        'active': 'Активный',
+        'in_progress': 'В процессе',
+        'closed': 'Завершён',
+        'completed': 'Завершён',
+        'cancelled': 'Отменён',
+        'no_offers': 'Без предложений'
+    };
+    return statusMap[status] || status;
+}
 
 
