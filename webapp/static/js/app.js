@@ -2815,28 +2815,22 @@ async function exportReport() {
         if (reportsFilters.dateTo) params.append('date_to', reportsFilters.dateTo);
 
         console.log('Export URL:', `${API_BASE}api/reports/export?${params}`);
-        const response = await fetchWithTimeout(`${API_BASE}api/reports/export?${params}`, {}, 30000);
         
-        console.log('Export response status:', response.status);
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Export error:', errorText);
-            throw new Error(`Ошибка экспорта отчёта: ${response.status}`);
+        // Формируем полный URL для открытия в браузере
+        const exportUrl = `${API_BASE}api/reports/export?${params}`;
+        
+        // Пробуем открыть файл в новом окне через Telegram WebApp
+        if (tg && tg.openLink) {
+            console.log('Opening export link via Telegram WebApp...');
+            tg.openLink(exportUrl);
+            showSuccess('Отчёт формируется. Файл откроется в браузере для скачивания.');
+        } else {
+            // Fallback: открываем в новом окне обычным способом
+            console.log('Opening export link in new window...');
+            window.open(exportUrl, '_blank');
+            showSuccess('Отчёт формируется. Файл откроется в новой вкладке.');
         }
-
-        const blob = await response.blob();
-        console.log('Received blob, size:', blob.size);
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `report_${new Date().toISOString().split('T')[0]}.xlsx`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-
-        showSuccess('Отчёт успешно экспортирован');
+        
     } catch (error) {
         console.error('Ошибка экспорта отчёта:', error);
         showError(`Ошибка экспорта: ${error.message}`);
