@@ -2647,6 +2647,17 @@ function renderReportsTab(container) {
 
 async function loadReportStats() {
     try {
+        console.log('Loading report stats with filters:', reportsFilters);
+        console.log('Current user:', currentUser);
+
+        if (!currentUser || !currentUser.telegram_id) {
+            console.error('No current user or telegram_id');
+            document.getElementById('reports-stats').innerHTML = `
+                <div class="error-message">Ошибка: пользователь не авторизован</div>
+            `;
+            return;
+        }
+
         const params = new URLSearchParams({
             telegram_id: currentUser.telegram_id,
             period: reportsFilters.period,
@@ -2658,21 +2669,37 @@ async function loadReportStats() {
         if (reportsFilters.dateFrom) params.append('date_from', reportsFilters.dateFrom);
         if (reportsFilters.dateTo) params.append('date_to', reportsFilters.dateTo);
 
+        console.log('API request URL:', `${API_BASE}api/reports/stats?${params}`);
         const response = await fetchWithTimeout(`${API_BASE}api/reports/stats?${params}`, {}, 10000);
-        if (!response.ok) throw new Error('Ошибка загрузки статистики');
+        
+        console.log('Response status:', response.status);
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('API error response:', errorText);
+            throw new Error(`Ошибка загрузки статистики: ${response.status}`);
+        }
 
         const data = await response.json();
+        console.log('Received data:', data);
         renderReportStats(data);
     } catch (error) {
         console.error('Ошибка загрузки статистики отчёта:', error);
         document.getElementById('reports-stats').innerHTML = `
-            <div class="error-message">Ошибка загрузки статистики</div>
+            <div class="error-message">Ошибка загрузки статистики: ${error.message}</div>
         `;
+        document.getElementById('reports-orders').innerHTML = '';
     }
 }
 
 function renderReportStats(data) {
+    console.log('Rendering report stats with data:', data);
+    
     const statsContainer = document.getElementById('reports-stats');
+    if (!statsContainer) {
+        console.error('Stats container not found');
+        return;
+    }
+    
     statsContainer.innerHTML = `
         <div class="stats-grid">
             <div class="stat-card">
@@ -2700,6 +2727,13 @@ function renderReportStats(data) {
 
     // Render orders list
     const ordersContainer = document.getElementById('reports-orders');
+    if (!ordersContainer) {
+        console.error('Orders container not found');
+        return;
+    }
+    
+    console.log('Orders count:', data.orders ? data.orders.length : 0);
+    
     if (data.orders && data.orders.length > 0) {
         ordersContainer.innerHTML = `
             <div class="reports-orders-title">Список заказов</div>
@@ -2762,6 +2796,13 @@ function applyReportFilters() {
 
 async function exportReport() {
     try {
+        console.log('Starting report export...');
+        
+        if (!currentUser || !currentUser.telegram_id) {
+            showNotification('Ошибка: пользователь не авторизован', 'error');
+            return;
+        }
+
         const params = new URLSearchParams({
             telegram_id: currentUser.telegram_id,
             period: reportsFilters.period,
@@ -2773,10 +2814,18 @@ async function exportReport() {
         if (reportsFilters.dateFrom) params.append('date_from', reportsFilters.dateFrom);
         if (reportsFilters.dateTo) params.append('date_to', reportsFilters.dateTo);
 
+        console.log('Export URL:', `${API_BASE}api/reports/export?${params}`);
         const response = await fetchWithTimeout(`${API_BASE}api/reports/export?${params}`, {}, 30000);
-        if (!response.ok) throw new Error('Ошибка экспорта отчёта');
+        
+        console.log('Export response status:', response.status);
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Export error:', errorText);
+            throw new Error(`Ошибка экспорта отчёта: ${response.status}`);
+        }
 
         const blob = await response.blob();
+        console.log('Received blob, size:', blob.size);
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.style.display = 'none';
@@ -2790,7 +2839,7 @@ async function exportReport() {
         showNotification('Отчёт успешно экспортирован', 'success');
     } catch (error) {
         console.error('Ошибка экспорта отчёта:', error);
-        showNotification('Ошибка экспорта отчёта', 'error');
+        showNotification(`Ошибка экспорта: ${error.message}`, 'error');
     }
 }
 

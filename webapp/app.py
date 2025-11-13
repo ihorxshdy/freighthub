@@ -1336,6 +1336,8 @@ def get_report_stats():
         date_from = request.args.get('date_from')
         date_to = request.args.get('date_to')
 
+        logger.info(f"Report stats request: telegram_id={telegram_id}, period={period}, status={status}")
+
         if not telegram_id:
             return jsonify({'error': 'telegram_id is required'}), 400
 
@@ -1384,8 +1386,10 @@ def get_report_stats():
 
         query += " ORDER BY o.created_at DESC"
 
+        logger.info(f"Executing query with params: {params}")
         cursor.execute(query, params)
         orders = cursor.fetchall()
+        logger.info(f"Found {len(orders)} orders for telegram_id={telegram_id}")
 
         # Подсчёт статистики
         total = len(orders)
@@ -1420,18 +1424,20 @@ def get_report_stats():
 
         conn.close()
 
-        return jsonify({
+        result = {
             'total': total,
             'completed': completed,
             'cancelled': cancelled,
             'no_offers': no_offers_count,
             'total_spent': total_spent,
             'orders': orders_list
-        })
+        }
+        logger.info(f"Returning report stats: {result}")
+        return jsonify(result)
 
     except Exception as e:
-        logger.error(f"Error getting report stats: {e}")
-        return jsonify({'error': 'Failed to get report stats'}), 500
+        logger.error(f"Error getting report stats: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/reports/export', methods=['GET'])
 def export_report():
@@ -1449,6 +1455,8 @@ def export_report():
         delivery_location = request.args.get('delivery_location', 'all')
         date_from = request.args.get('date_from')
         date_to = request.args.get('date_to')
+
+        logger.info(f"Report export request: telegram_id={telegram_id}, period={period}")
 
         if not telegram_id:
             return jsonify({'error': 'telegram_id is required'}), 400
@@ -1499,6 +1507,7 @@ def export_report():
 
         cursor.execute(query, params)
         orders = cursor.fetchall()
+        logger.info(f"Found {len(orders)} orders for export")
 
         # Создаём Excel файл
         wb = Workbook()
@@ -1556,6 +1565,8 @@ def export_report():
         output = BytesIO()
         wb.save(output)
         output.seek(0)
+        
+        logger.info(f"Excel file created, size: {output.tell()} bytes")
 
         conn.close()
 
@@ -1566,12 +1577,12 @@ def export_report():
             download_name=f'report_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
         )
 
-    except ImportError:
-        logger.error("openpyxl not installed")
+    except ImportError as ie:
+        logger.error(f"openpyxl not installed: {ie}")
         return jsonify({'error': 'Excel export not available. Install openpyxl.'}), 500
     except Exception as e:
-        logger.error(f"Error exporting report: {e}")
-        return jsonify({'error': 'Failed to export report'}), 500
+        logger.error(f"Error exporting report: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
 
 # Подключаем расширенную систему отзывов
 setup_review_routes(app, get_db_connection)
