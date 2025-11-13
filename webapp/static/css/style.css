@@ -88,7 +88,7 @@ html {
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background: #f5f5f7;
+    background-color: #f5f5f7;
     background-image: url('../images/background_day.jpg');
     background-size: cover;
     background-position: center;
@@ -120,16 +120,16 @@ body.theme-dark {
 /* Dark theme backgrounds - handled by body background-image */
 @media (prefers-color-scheme: dark) {
     html {
-        background: #000000;
+        background-color: #000000;
     }
     
     body {
-        background: #000000;
+        background-color: #000000;
     }
 }
 
 body.theme-dark {
-    background: #000000;
+    background-color: #000000;
 }
 
 .screen {
