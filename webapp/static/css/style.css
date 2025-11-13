@@ -89,11 +89,27 @@ html {
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     background: #f5f5f7;
+    background-image: url('../images/background_day.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
     color: var(--tg-theme-text-color);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     min-height: 100vh;
+}
+
+/* Dark theme background */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-image: url('../images/background_night.jpg');
+    }
+}
+
+body.theme-dark {
+    background-image: url('../images/background_night.jpg');
 }
 
 #app {
