@@ -1535,7 +1535,7 @@ def export_report():
         ws.title = "Отчёт по заказам"
 
         # Заголовки
-        headers = ['№', 'Дата создания', 'Статус', 'Откуда', 'Куда', 'Груз', 'Тип машины', 'Водитель', 'Стоимость', 'Фото']
+        headers = ['№', 'Дата создания', 'Статус', 'Откуда', 'Куда', 'Груз', 'Тип машины', 'Водитель', 'Стоимость']
         ws.append(headers)
 
         # Стилизация заголовков
@@ -1549,11 +1549,6 @@ def export_report():
 
         # Данные
         for order in orders:
-            # Получаем фотографии
-            cursor.execute("SELECT photo_url FROM order_photos WHERE order_id = ?", (order['id'],))
-            photos = cursor.fetchall()
-            photo_urls = ', '.join([p['photo_url'] for p in photos]) if photos else 'Нет фото'
-
             row_data = [
                 order['id'],
                 order['created_at'],
@@ -1563,8 +1558,7 @@ def export_report():
                 order['cargo_description'],
                 order['truck_type'],
                 order['driver_name'] or 'Не назначен',
-                order['winning_price'] or 'Не указана',
-                photo_urls
+                order['winning_price'] or 'Не указана'
             ]
             ws.append(row_data)
 
