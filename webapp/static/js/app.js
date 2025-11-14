@@ -705,6 +705,15 @@ function initNavMenu() {
         ];
     }
     
+    // Добавляем админ панель для администратора
+    if (currentUser.telegram_id === 643813567) {
+        menuGroups.push({
+            items: [
+                { id: 'admin', label: 'Админ панель', icon: '⚙️' }
+            ]
+        });
+    }
+    
     let isFirst = true;
     menuGroups.forEach(group => {
         // Создаем группу
@@ -726,13 +735,15 @@ function initNavMenu() {
             menuItem.addEventListener('click', () => switchTab(item.id));
             menuGroup.appendChild(menuItem);
             
-            // Создаем контент вкладки
-            const tabPane = document.createElement('div');
-            tabPane.className = 'tab-pane' + (isFirst ? ' active' : '');
-            tabPane.id = `tab-${item.id}`;
-            tabContent.appendChild(tabPane);
+            // Создаем контент вкладки (кроме админ панели)
+            if (item.id !== 'admin') {
+                const tabPane = document.createElement('div');
+                tabPane.className = 'tab-pane' + (isFirst ? ' active' : '');
+                tabPane.id = `tab-${item.id}`;
+                tabContent.appendChild(tabPane);
+            }
             
-            if (isFirst) {
+            if (isFirst && item.id !== 'admin') {
                 currentTab = item.id;
                 isFirst = false;
             }
@@ -746,6 +757,12 @@ function initNavMenu() {
 }
 
 async function switchTab(tabId) {
+    // Специальная обработка для админ панели
+    if (tabId === 'admin') {
+        window.location.href = `/admin?telegram_id=${currentUser.telegram_id}`;
+        return;
+    }
+    
     // Обновляем активный пункт меню
     document.querySelectorAll('.menu-item').forEach(item => {
         item.classList.toggle('active', item.dataset.tab === tabId);
