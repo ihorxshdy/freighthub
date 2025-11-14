@@ -372,3 +372,94 @@ def setup_admin_routes(app, get_db_connection):
             'organization_id': invite['organization_id'],
             'invite_code_id': invite['id']
         })
+    
+    # ========== УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ ==========
+    
+    @app.route('/api/admin/users', methods=['GET'])
+    def get_users():
+        """Получить список всех пользователей"""
+        telegram_id = request.args.get('telegram_id')
+        org_id = request.args.get('organization_id')
+        
+        if not telegram_id or not is_admin(telegram_id):
+            return jsonify({'error': 'Access denied'}), 403
+        
+        conn = get_db_connection()
+        
+        if org_id:
+            users = conn.execute('''
+                SELECT u.*, o.name as organization_name, ic.code as invite_code
+                FROM users u
+                LEFT JOIN organizations o ON u.organization_id = o.id
+                LEFT JOIN invite_codes ic ON u.invite_code_id = ic.id
+                WHERE u.organization_id = ?
+                ORDER BY u.created_at DESC
+            ''', (org_id,)).fetchall()
+        else:
+            users = conn.execute('''
+                SELECT u.*, o.name as organization_name, ic.code as invite_code
+                FROM users u
+                LEFT JOIN organizations o ON u.organization_id = o.id
+                LEFT JOIN invite_codes ic ON u.invite_code_id = ic.id
+                ORDER BY u.created_at DESC
+            ''').fetchall()
+        
+        conn.close()
+        return jsonify([dict(user) for user in users])
+    
+    @app.route('/api/admin/users/<int:user_telegram_id>', methods=['PUT'])
+    def update_user(user_telegram_id):
+        """Обновить пользователя (привязка к организации, бан)"""
+        telegram_id = request.args.get('telegram_id')
+        data = request.json
+        
+        if not telegram_id or not is_admin(telegram_id):
+            return jsonify({'error': 'Access denied'}), 403
+        
+        conn = get_db_connection()
+        
+        updates = []
+        params = []
+        
+        if 'organization_id' in data:
+            updates.append('organization_id = ?')
+            params.append(data['organization_id'])
+        if 'is_banned' in data:
+            updates.append('is_banned = ?')
+            params.append(1 if data['is_banned'] else 0)
+        
+        if updates:
+            params.append(user_telegram_id)
+            conn.execute(
+                f"UPDATE users SET {', '.join(updates)} WHERE telegram_id = ?",
+                params
+            )
+            conn.commit()
+        
+        user = conn.execute('''
+            SELECT u.*, o.name as organization_name, ic.code as invite_code
+            FROM users u
+            LEFT JOIN organizations o ON u.organization_id = o.id
+            LEFT JOIN invite_codes ic ON u.invite_code_id = ic.id
+            WHERE u.telegram_id = ?
+        ''', (user_telegram_id,)).fetchone()
+        conn.close()
+        
+        if user:
+            return jsonify({'success': True, 'user': dict(user)})
+        return jsonify({'error': 'User not found'}), 404
+    
+    @app.route('/api/admin/users/<int:user_telegram_id>', methods=['DELETE'])
+    def delete_user(user_telegram_id):
+        """Удалить пользователя"""
+        telegram_id = request.args.get('telegram_id')
+        
+        if not telegram_id or not is_admin(telegram_id):
+            return jsonify({'error': 'Access denied'}), 403
+        
+        conn = get_db_connection()
+        conn.execute('DELETE FROM users WHERE telegram_id = ?', (user_telegram_id,))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True})
