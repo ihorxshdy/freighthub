@@ -759,7 +759,9 @@ function initNavMenu() {
 async function switchTab(tabId) {
     // Специальная обработка для админ панели
     if (tabId === 'admin') {
-        window.location.href = `/admin?telegram_id=${currentUser.telegram_id}`;
+        // Получаем базовый путь из текущего URL
+        const basePath = window.location.pathname.split('/').slice(0, -1).join('/') || '';
+        window.location.href = `${basePath}/admin?telegram_id=${currentUser.telegram_id}`;
         return;
     }
     
