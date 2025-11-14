@@ -210,15 +210,27 @@ async def get_bid_participants(order_id: int):
                 'created_at': row[6]
             } for row in rows]
 
-async def create_user(telegram_id: int, phone_number: str, role: str, truck_type: str = None, name: str = None):
+async def create_user(telegram_id: int, phone_number: str, role: str, truck_type: str = None, name: str = None, 
+                     organization_id: int = None, invite_code: str = None):
     """Создать нового пользователя"""
     from datetime import datetime
     async with aiosqlite.connect(DB_PATH) as db:
+        # Получить invite_code_id если есть код
+        invite_code_id = None
+        if invite_code:
+            async with db.execute(
+                'SELECT id FROM invite_codes WHERE code = ?',
+                (invite_code.upper(),)
+            ) as cursor:
+                code_row = await cursor.fetchone()
+                if code_row:
+                    invite_code_id = code_row[0]
+        
         # Создаём пользователя
         cursor = await db.execute(
-            """INSERT INTO users (telegram_id, phone_number, role, truck_type, name) 
-               VALUES (?, ?, ?, ?, ?)""",
-            (telegram_id, phone_number, role, truck_type, name)
+            """INSERT INTO users (telegram_id, phone_number, role, truck_type, name, organization_id, invite_code_id) 
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (telegram_id, phone_number, role, truck_type, name, organization_id, invite_code_id)
         )
         user_id = cursor.lastrowid
         

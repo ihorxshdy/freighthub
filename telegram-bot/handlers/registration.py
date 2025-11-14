@@ -8,8 +8,25 @@ from database.models import get_user_by_telegram_id, create_user
 from bot.config import TRUCK_TYPES, USER_ROLES, TRUCK_CATEGORIES, get_truck_display_name
 from bot.keyboards import get_webapp_menu
 from bot.webapp_config import WEBAPP_URL
+import aiohttp
 
 router = Router()
+
+async def mark_invite_code_used(code: str, telegram_id: int):
+    """Отмечает инвайт-код как использованный"""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f'{WEBAPP_URL}/api/invite-codes/use',
+                json={'code': code, 'telegram_id': telegram_id}
+            ) as response:
+                result = await response.json()
+                if result.get('success'):
+                    print(f"✅ Инвайт-код {code} отмечен как использованный для {telegram_id}")
+                else:
+                    print(f"⚠️ Не удалось отметить код {code}: {result.get('error', 'Unknown error')}")
+    except Exception as e:
+        print(f"❌ Ошибка отметки использования кода: {e}")
 
 # ID канала для обязательной подписки
 REQUIRED_CHANNEL = "@freighthub_logistics"
@@ -232,9 +249,15 @@ async def role_chosen(callback: CallbackQuery, state: FSMContext):
                 phone_number=data['phone_number'],
                 role=role,
                 truck_type=None,
-                name=callback.from_user.full_name or "Заказчик"
+                name=callback.from_user.full_name or "Заказчик",
+                organization_id=data.get('organization_id'),
+                invite_code=data.get('invite_code')
             )
             print(f"✅ Пользователь создан: telegram_id={callback.from_user.id}")
+            
+            # Отмечаем инвайт-код как использованный
+            if data.get('invite_code'):
+                await mark_invite_code_used(data['invite_code'], callback.from_user.id)
             
             # Даем базе данных время на синхронизацию
             import asyncio
@@ -353,9 +376,15 @@ async def truck_subtype_chosen(callback: CallbackQuery, state: FSMContext):
                 phone_number=data['phone_number'],
                 role='driver',
                 truck_type=truck_type,
-                name=callback.from_user.full_name or "Водитель"
+                name=callback.from_user.full_name or "Водитель",
+                organization_id=data.get('organization_id'),
+                invite_code=data.get('invite_code')
             )
             print(f"✅ Водитель создан: telegram_id={callback.from_user.id}")
+            
+            # Отмечаем инвайт-код как использованный
+            if data.get('invite_code'):
+                await mark_invite_code_used(data['invite_code'], callback.from_user.id)
             
             # Даем базе данных время на синхронизацию
             import asyncio
@@ -409,8 +438,14 @@ async def truck_final_chosen(callback: CallbackQuery, state: FSMContext):
             phone_number=data['phone_number'],
             role='driver',
             truck_type=final_id,
-            name=callback.from_user.full_name or "Водитель"
+            name=callback.from_user.full_name or "Водитель",
+            organization_id=data.get('organization_id'),
+            invite_code=data.get('invite_code')
         )
+        
+        # Отмечаем инвайт-код как использованный
+        if data.get('invite_code'):
+            await mark_invite_code_used(data['invite_code'], callback.from_user.id)
         
         await callback.message.edit_text(
             f"✅ **Регистрация завершена!**\n\n"

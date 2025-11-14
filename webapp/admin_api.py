@@ -11,7 +11,7 @@ def setup_admin_routes(app, get_db_connection):
     """Настройка маршрутов админ панели"""
     
     # Список админов (telegram_id)
-    ADMIN_IDS = [966377899]  # Замените на ваш telegram_id
+    ADMIN_IDS = [643813567]  # Замените на ваш telegram_id
     
     def is_admin(telegram_id):
         """Проверка прав администратора"""
