@@ -18,6 +18,7 @@ CHANNEL_URL = "https://t.me/freighthub_logistics"
 
 class RegistrationStates(StatesGroup):
     waiting_for_subscription = State()
+    waiting_for_invite_code = State()
     waiting_for_phone = State()
     choosing_role = State()
     choosing_truck_category = State()
@@ -112,22 +113,71 @@ async def check_subscription_handler(callback: CallbackQuery, state: FSMContext,
         )
 
 async def start_registration_after_subscription(bot: Bot, user_id: int, state: FSMContext):
-    """Начало процесса регистрации после подтверждения подписки"""
-    phone_keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="📞 Поделиться номером телефона", request_contact=True)]
-        ],
-        resize_keyboard=True,
-        one_time_keyboard=True
-    )
-    
+    """Начало процесса регистрации после подтверждения подписки - запрос инвайт-кода"""
     await bot.send_message(
         chat_id=user_id,
         text="✅ Отлично! Начинаем регистрацию.\n\n"
-             "Пожалуйста, поделитесь вашим номером телефона:",
-        reply_markup=phone_keyboard
+             "🎫 **Введите ваш инвайт-код:**\n\n"
+             "Код должен был предоставить вам вашего работодателя или организация.\n\n"
+             "Пример: ABC12DEF"
     )
-    await state.set_state(RegistrationStates.waiting_for_phone)
+    await state.set_state(RegistrationStates.waiting_for_invite_code)
+
+@router.message(StateFilter(RegistrationStates.waiting_for_invite_code))
+async def invite_code_received(message: Message, state: FSMContext):
+    """Обработка ввода инвайт-кода"""
+    if not message.text:
+        await message.answer("❌ Пожалуйста, отправьте код текстом")
+        return
+    
+    code = message.text.strip().upper()
+    
+    # Валидация кода через API webapp
+    import aiohttp
+    try:
+        from bot.webapp_config import WEBAPP_URL
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f'{WEBAPP_URL}/api/invite-codes/validate',
+                json={'code': code, 'telegram_id': message.from_user.id}
+            ) as response:
+                result = await response.json()
+                
+                if result.get('valid'):
+                    # Код валиден - сохраняем и переходим к запросу телефона
+                    await state.update_data(
+                        invite_code=code,
+                        organization_id=result['organization_id'],
+                        organization_name=result['organization_name']
+                    )
+                    
+                    phone_keyboard = ReplyKeyboardMarkup(
+                        keyboard=[
+                            [KeyboardButton(text="📞 Поделиться номером телефона", request_contact=True)]
+                        ],
+                        resize_keyboard=True,
+                        one_time_keyboard=True
+                    )
+                    
+                    await message.answer(
+                        f"✅ Инвайт-код принят!\n\n"
+                        f"Организация: **{result['organization_name']}**\n\n"
+                        f"Теперь поделитесь вашим номером телефона:",
+                        reply_markup=phone_keyboard
+                    )
+                    await state.set_state(RegistrationStates.waiting_for_phone)
+                else:
+                    # Код невалиден
+                    error_msg = result.get('error', 'Неверный код')
+                    await message.answer(
+                        f"❌ {error_msg}\n\n"
+                        f"Попробуйте ввести код ещё раз или свяжитесь с вашей организацией."
+                    )
+    except Exception as e:
+        print(f"❌ Ошибка валидации инвайт-кода: {e}")
+        await message.answer(
+            "❌ Ошибка проверки кода. Попробуйте позже или свяжитесь с поддержкой."
+        )
 
 @router.message(StateFilter(RegistrationStates.waiting_for_phone), F.contact)
 async def phone_received(message: Message, state: FSMContext):

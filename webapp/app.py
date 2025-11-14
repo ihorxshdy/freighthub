@@ -21,6 +21,7 @@ from webhook_client import notify_new_order  # Webhook уведомления
 from reviews_api import setup_review_routes  # Расширенная система отзывов
 from photos_api import setup_photo_routes  # Фотофиксация этапов доставки
 from chat_api import setup_chat_routes  # Система чата
+from admin_api import setup_admin_routes  # Админ панель для организаций
 
 app = Flask(__name__)
 CORS(app)
@@ -75,6 +76,11 @@ def index():
 def view_history():
     """Административная панель истории изменений всех заказов"""
     return render_template('history_admin.html')
+
+@app.route('/admin')
+def admin_panel():
+    """Админ панель управления организациями и инвайт-кодами"""
+    return render_template('admin.html')
 
 # === API ENDPOINTS ===
 
@@ -1606,6 +1612,9 @@ setup_photo_routes(app, get_db_connection)
 
 # Подключаем систему чата
 setup_chat_routes(app, get_db_connection)
+
+# Подключаем админ панель
+setup_admin_routes(app, get_db_connection)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
