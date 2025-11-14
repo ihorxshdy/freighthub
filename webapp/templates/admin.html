@@ -16,6 +16,59 @@
             padding-bottom: 40px;
         }
         
+        /* Кастомный header для админки */
+        .admin-header {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .admin-back-btn {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 10px 16px;
+            color: var(--tg-theme-button-color);
+            font-size: 17px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            width: fit-content;
+            box-shadow: 0 2px 8px var(--glass-shadow);
+        }
+        
+        .admin-back-btn:active {
+            transform: scale(0.96);
+            opacity: 0.8;
+        }
+        
+        .admin-title-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 16px 20px;
+            box-shadow: 0 4px 16px var(--glass-shadow);
+        }
+        
+        .admin-title-card h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+            color: var(--tg-theme-text-color);
+            letter-spacing: -0.5px;
+        }
+        
         .stat-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -89,11 +142,12 @@
             transform: scale(0.95);
         }
         
+        /* Компактные карточки пользователей */
         .user-card {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 12px 0;
+            gap: 10px;
+            padding: 8px 0;
             border-bottom: 0.5px solid var(--glass-border);
         }
         
@@ -102,15 +156,15 @@
         }
         
         .user-avatar {
-            width: 44px;
-            height: 44px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             background: linear-gradient(135deg, #667eea, #764ba2);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 18px;
+            font-size: 15px;
             font-weight: 600;
             flex-shrink: 0;
         }
@@ -118,18 +172,25 @@
         .user-info {
             flex: 1;
             min-width: 0;
+            overflow: hidden;
         }
         
         .user-name {
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 500;
             margin-bottom: 2px;
             color: var(--tg-theme-text-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
         .user-phone {
-            font-size: 13px;
+            font-size: 12px;
             color: var(--tg-theme-hint-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
         .btn-action {
@@ -266,10 +327,12 @@
 </head>
 <body>
     <div id="admin-screen" class="screen admin-screen">
-        <!-- Header как в профиле -->
-        <div class="profile-header">
-            <button class="back-btn" onclick="goBackToApp()">← Назад</button>
-            <h2>Админ Панель</h2>
+        <!-- Кастомный header для админки -->
+        <div class="admin-header">
+            <button class="admin-back-btn" onclick="goBackToApp()">← Назад</button>
+            <div class="admin-title-card">
+                <h1>Админ Панель</h1>
+            </div>
         </div>
         
         <!-- Навигационное меню (как в основном приложении) -->
