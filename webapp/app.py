@@ -80,7 +80,8 @@ def view_history():
 @app.route('/admin')
 def admin_panel():
     """Админ панель управления организациями и инвайт-кодами"""
-    return render_template('admin.html')
+    import time
+    return render_template('admin.html', version=int(time.time()))
 
 # === API ENDPOINTS ===
 
