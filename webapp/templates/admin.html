@@ -3,136 +3,237 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Админ Панель</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* iOS Settings стиль */
-        #admin-app {
+        /* Дополнительные стили для админки */
+        .admin-screen {
             min-height: 100vh;
             padding-bottom: 40px;
         }
         
-        .admin-header {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--glass-border);
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0;
+            border-top: 0.5px solid var(--glass-border);
+            margin: 16px -20px -20px;
         }
         
-        .back-btn {
-            background: none;
-            border: none;
-            color: var(--tg-theme-button-color, #007AFF);
-            font-size: 17px;
-            font-weight: 400;
-            cursor: pointer;
-            padding: 4px 0;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        
-        .back-btn:active {
-            opacity: 0.5;
-        }
-        
-        .admin-title {
-            font-size: 17px;
-            font-weight: 600;
-            color: var(--tg-theme-text-color);
-        }
-        
-        .admin-tabs {
-            display: flex;
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 2px;
-            margin: 16px;
-            box-shadow: 0 2px 8px var(--glass-shadow);
-        }
-        
-        .admin-tab {
-            flex: 1;
-            padding: 8px 12px;
-            background: none;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--tg-theme-text-color);
-            transition: all 0.2s;
-        }
-        
-        .admin-tab.active {
-            background: var(--tg-theme-button-color, #007AFF);
-            color: white;
-        }
-        
-        .admin-section {
-            display: none;
-            padding: 0 16px;
-        }
-        
-        .admin-section.active {
-            display: block;
-        }
-        
-        .card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 16px;
-            box-shadow: 0 4px 16px var(--glass-shadow);
-        }
-        
-        .org-card {
-            border-left: 3px solid var(--tg-theme-button-color, #007AFF);
-        }
-        
-        .stats {
-            display: flex;
-            gap: 12px;
-            margin-top: 12px;
-        }
-        
-        .stat {
-            flex: 1;
+        .stat-item {
             text-align: center;
+            padding: 12px;
+            border-right: 0.5px solid var(--glass-border);
+        }
+        
+        .stat-item:last-child {
+            border-right: none;
         }
         
         .stat-label {
             font-size: 11px;
-            color: var(--tg-theme-hint-color, #999);
+            color: var(--tg-theme-hint-color);
             margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         .stat-value {
-            font-size: 20px;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--tg-theme-text-color);
+        }
+        
+        .org-title {
+            font-size: 17px;
             font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--tg-theme-text-color);
+        }
+        
+        .org-subtitle {
+            font-size: 13px;
+            color: var(--tg-theme-hint-color);
+            margin-bottom: 12px;
+        }
+        
+        .codes-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .code-badge {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 8px 4px;
+            text-align: center;
+            font-family: 'SF Mono', 'Monaco', monospace;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .code-badge.used {
+            opacity: 0.4;
+            text-decoration: line-through;
+        }
+        
+        .code-badge:active {
+            transform: scale(0.95);
+        }
+        
+        .user-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 0.5px solid var(--glass-border);
+        }
+        
+        .user-card:last-child {
+            border-bottom: none;
+        }
+        
+        .user-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        
+        .user-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .user-name {
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 2px;
+            color: var(--tg-theme-text-color);
+        }
+        
+        .user-phone {
+            font-size: 13px;
+            color: var(--tg-theme-hint-color);
+        }
+        
+        .btn-action {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        
+        .btn-action:active {
+            opacity: 0.6;
+        }
+        
+        /* Модалка в стиле iOS */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-dialog {
+            background: var(--glass-bg);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            max-width: 400px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal-header {
+            padding: 20px 20px 12px;
+            border-bottom: 0.5px solid var(--glass-border);
+        }
+        
+        .modal-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color);
+            text-align: center;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--tg-theme-text-color);
+            margin-bottom: 6px;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            font-size: 15px;
+            background: var(--input-bg);
+            color: var(--tg-theme-text-color);
+            transition: all 0.2s;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            background: var(--input-focus-bg);
+            border-color: var(--tg-theme-button-color);
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 8px;
         }
         
         .btn {
-            padding: 8px 16px;
+            flex: 1;
+            padding: 12px 16px;
             border: none;
             border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
             cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
             transition: opacity 0.2s;
         }
         
@@ -141,7 +242,7 @@
         }
         
         .btn-primary {
-            background: var(--tg-theme-button-color, #007AFF);
+            background: var(--tg-theme-button-color);
             color: white;
         }
         
@@ -156,243 +257,171 @@
         }
         
         .btn-secondary {
-            background: var(--tg-theme-hint-color, #8E8E93);
+            background: var(--tg-theme-hint-color);
             color: white;
-        }
-        
-        .form-group {
-            margin-bottom: 12px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 6px;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--tg-theme-text-color);
-        }
-        
-        .form-group input, .form-group textarea, .form-group select {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--glass-border);
-            border-radius: 10px;
-            font-size: 15px;
-            background: var(--glass-bg);
-            color: var(--tg-theme-text-color);
-        }
-        
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.4);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .modal.show {
-            display: flex;
-        }
-        
-        .modal-content {
-            background: var(--glass-bg);
-            backdrop-filter: blur(40px);
-            -webkit-backdrop-filter: blur(40px);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 20px;
-            max-width: 400px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-        
-        .modal-content h2 {
-            font-size: 17px;
-            font-weight: 600;
-            margin-bottom: 16px;
-        }
-        
-        .codes-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 8px;
-            margin-top: 12px;
-        }
-        
-        .code-item {
-            padding: 6px;
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 8px;
-            text-align: center;
-            font-family: 'SF Mono', 'Menlo', monospace;
-            font-size: 12px;
-        }
-        
-        .code-item.used {
-            opacity: 0.4;
-            text-decoration: line-through;
-        }
-        
-        .actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-            flex-wrap: wrap;
-        }
-        
-        h3 {
-            font-size: 15px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        
-        p {
-            font-size: 13px;
-            line-height: 1.4;
         }
     </style>
 </head>
 <body>
-    <div id="admin-app">
-        <div class="admin-header">
+    <div id="admin-screen" class="screen admin-screen">
+        <!-- Header как в профиле -->
+        <div class="profile-header">
             <button class="back-btn" onclick="goBackToApp()">← Назад</button>
-            <span class="admin-title">Админ Панель</span>
+            <h2>Админ Панель</h2>
         </div>
         
-        <div class="admin-tabs">
-            <button class="admin-tab active" data-tab="organizations">Организации</button>
-            <button class="admin-tab" data-tab="codes">Инвайт-коды</button>
-            <button class="admin-tab" data-tab="users">Пользователи</button>
-        </div>
-        
-        <!-- Секция организаций -->
-        <div id="organizations-section" class="admin-section active">
-            <div class="card">
-                <button class="btn btn-primary" onclick="showAddOrgModal()">➕ Добавить организацию</button>
-            </div>
-            
-            <div id="organizations-list"></div>
-        </div>
-        
-        <!-- Секция инвайт-кодов -->
-        <div id="codes-section" class="admin-section">
-            <div class="card">
-                <div class="form-group">
-                    <label>Фильтр по организации:</label>
-                    <select id="org-filter" onchange="loadInviteCodes()">
-                        <option value="">Все организации</option>
-                    </select>
+        <!-- Навигационное меню (как в основном приложении) -->
+        <nav class="nav-menu">
+            <div class="menu-group">
+                <div class="menu-item active" onclick="switchTab('organizations')">
+                    <div class="menu-item-content">
+                        <span class="menu-icon">🏢</span>
+                        <span class="menu-label">Организации</span>
+                    </div>
                 </div>
-                <button class="btn btn-primary" onclick="showGenerateCodesModal()">🎫 Генерировать коды</button>
-            </div>
-            
-            <div id="codes-list"></div>
-        </div>
-        
-        <!-- Секция пользователей -->
-        <div id="users-section" class="admin-section">
-            <div class="card">
-                <div class="form-group">
-                    <label>Фильтр по организации:</label>
-                    <select id="user-org-filter" onchange="loadUsers()">
-                        <option value="">Все организации</option>
-                    </select>
+                <div class="menu-item" onclick="switchTab('codes')">
+                    <div class="menu-item-content">
+                        <span class="menu-icon">🎫</span>
+                        <span class="menu-label">Инвайт-коды</span>
+                    </div>
+                </div>
+                <div class="menu-item" onclick="switchTab('users')">
+                    <div class="menu-item-content">
+                        <span class="menu-icon">👥</span>
+                        <span class="menu-label">Пользователи</span>
+                    </div>
                 </div>
             </div>
+        </nav>
+        
+        <!-- Контент вкладок -->
+        <div class="tab-content">
+            <!-- Организации -->
+            <div id="tab-organizations" class="tab-pane active">
+                <div style="padding: 0 16px;">
+                    <button class="btn btn-primary" onclick="showAddOrgModal()" style="width: 100%; margin-bottom: 16px;">
+                        ➕ Добавить организацию
+                    </button>
+                </div>
+                <div id="organizations-list"></div>
+            </div>
             
-            <div id="users-list"></div>
+            <!-- Инвайт-коды -->
+            <div id="tab-codes" class="tab-pane">
+                <div style="padding: 0 16px;">
+                    <div class="form-group">
+                        <label class="form-label">Фильтр по организации:</label>
+                        <select id="org-filter" class="form-control" onchange="loadInviteCodes()">
+                            <option value="">Все организации</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-success" onclick="showGenerateCodesModal()" style="width: 100%; margin-bottom: 16px;">
+                        🎫 Генерировать коды
+                    </button>
+                </div>
+                <div id="codes-list"></div>
+            </div>
+            
+            <!-- Пользователи -->
+            <div id="tab-users" class="tab-pane">
+                <div style="padding: 0 16px;">
+                    <div class="form-group">
+                        <label class="form-label">Фильтр по организации:</label>
+                        <select id="user-org-filter" class="form-control" onchange="loadUsers()">
+                            <option value="">Все организации</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="users-list"></div>
+            </div>
         </div>
     </div>
     
     <!-- Модалка добавления организации -->
     <div id="add-org-modal" class="modal">
-        <div class="modal-content">
-            <h2>Новая организация</h2>
-            <div class="form-group">
-                <label>Название:</label>
-                <input type="text" id="org-name" placeholder="Название организации">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <div class="modal-title">Новая организация</div>
             </div>
-            <div class="form-group">
-                <label>Описание:</label>
-                <textarea id="org-description" rows="3" placeholder="Описание (необязательно)"></textarea>
-            </div>
-            <div class="actions">
-                <button class="btn btn-primary" onclick="createOrganization()">Создать</button>
-                <button class="btn btn-secondary" onclick="closeModal('add-org-modal')">Отмена</button>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Название:</label>
+                    <input type="text" id="org-name" class="form-control" placeholder="Название организации">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Описание:</label>
+                    <textarea id="org-description" class="form-control" rows="3" placeholder="Описание (необязательно)"></textarea>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="closeModal('add-org-modal')">Отмена</button>
+                    <button class="btn btn-primary" onclick="createOrganization()">Создать</button>
+                </div>
             </div>
         </div>
     </div>
     
     <!-- Модалка генерации кодов -->
     <div id="generate-codes-modal" class="modal">
-        <div class="modal-content">
-            <h2>Генерация инвайт-кодов</h2>
-            <div class="form-group">
-                <label>Организация:</label>
-                <select id="gen-org-id"></select>
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <div class="modal-title">Генерация инвайт-кодов</div>
             </div>
-            <div class="form-group">
-                <label>Количество кодов:</label>
-                <input type="number" id="gen-count" value="10" min="1" max="100">
-            </div>
-            <div class="form-group">
-                <label>Срок действия (дней, необязательно):</label>
-                <input type="number" id="gen-expires" placeholder="Бессрочно">
-            </div>
-            <div class="actions">
-                <button class="btn btn-success" onclick="generateCodes()">Генерировать</button>
-                <button class="btn btn-secondary" onclick="closeModal('generate-codes-modal')">Отмена</button>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Организация:</label>
+                    <select id="gen-org-id" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Количество кодов:</label>
+                    <input type="number" id="gen-count" class="form-control" value="10" min="1" max="100">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Срок действия (дней):</label>
+                    <input type="number" id="gen-expires" class="form-control" placeholder="Бессрочно">
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="closeModal('generate-codes-modal')">Отмена</button>
+                    <button class="btn btn-success" onclick="generateCodes()">Генерировать</button>
+                </div>
             </div>
         </div>
     </div>
     
     <!-- Модалка редактирования пользователя -->
     <div id="edit-user-modal" class="modal">
-        <div class="modal-content">
-            <h2>Редактирование пользователя</h2>
-            <input type="hidden" id="edit-user-telegram-id">
-            <div class="form-group">
-                <label>Имя:</label>
-                <input type="text" id="edit-user-name" disabled>
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <div class="modal-title">Редактирование пользователя</div>
             </div>
-            <div class="form-group">
-                <label>Телефон:</label>
-                <input type="text" id="edit-user-phone" disabled>
-            </div>
-            <div class="form-group">
-                <label>Роль:</label>
-                <input type="text" id="edit-user-role" disabled>
-            </div>
-            <div class="form-group">
-                <label>Организация:</label>
-                <select id="edit-user-org"></select>
-            </div>
-            <div class="form-group">
-                <label>
-                    <input type="checkbox" id="edit-user-banned">
-                    Заблокирован
-                </label>
-            </div>
-            <div class="form-group">
-                <label>Инвайт-код:</label>
-                <input type="text" id="edit-user-invite-code" disabled>
-            </div>
-            <div class="form-group">
-                <label>Дата регистрации:</label>
-                <input type="text" id="edit-user-created" disabled>
-            </div>
-            <div class="actions">
-                <button class="btn btn-success" onclick="saveUser()">Сохранить</button>
-                <button class="btn btn-danger" onclick="deleteUserConfirm()">Удалить</button>
-                <button class="btn btn-secondary" onclick="closeModal('edit-user-modal')">Отмена</button>
+            <div class="modal-body">
+                <input type="hidden" id="edit-user-telegram-id">
+                <div class="form-group">
+                    <label class="form-label">Имя:</label>
+                    <input type="text" id="edit-user-name" class="form-control" disabled>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Телефон:</label>
+                    <input type="text" id="edit-user-phone" class="form-control" disabled>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Роль:</label>
+                    <input type="text" id="edit-user-role" class="form-control" disabled>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Организация:</label>
+                    <select id="edit-user-org" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="edit-user-banned" style="width: auto;">
+                        <span class="form-label" style="margin: 0;">Заблокирован</span>
+                    </label>
+                </div>
+                <div class="btn-group" style="flex-direction: column;">
+                    <button class="btn btn-success" onclick="saveUser()">Сохранить</button>
+                    <button class="btn btn-danger" onclick="deleteUserConfirm()">Удалить пользователя</button>
+                    <button class="btn btn-secondary" onclick="closeModal('edit-user-modal')">Отмена</button>
+                </div>
             </div>
         </div>
     </div>
@@ -400,8 +429,6 @@
     <script>
         const tg = window.Telegram.WebApp;
         const telegram_id = tg.initDataUnsafe?.user?.id;
-        
-        // Определяем базовый путь API (относительно текущей страницы)
         const API_BASE = window.location.pathname.replace('/admin', '');
         
         if (!telegram_id) {
@@ -411,26 +438,34 @@
         tg.ready();
         tg.expand();
         
-        // Функция возврата в главное меню приложения
+        // Функция возврата в главное меню
         function goBackToApp() {
             window.location.href = `${API_BASE}/?telegram_id=${telegram_id}`;
         }
         
-        // Переключение табов
-        document.querySelectorAll('.admin-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                const tabName = tab.dataset.tab;
-                
-                document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
-                
-                tab.classList.add('active');
-                document.getElementById(tabName + '-section').classList.add('active');
-                
-                if (tabName === 'organizations') loadOrganizations();
-                if (tabName === 'codes') loadInviteCodes();
+        // Переключение вкладок
+        function switchTab(tabName) {
+            // Убираем active со всех меню
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
             });
-        });
+            
+            // Добавляем active к выбранному
+            event.currentTarget.classList.add('active');
+            
+            // Скрываем все вкладки
+            document.querySelectorAll('.tab-pane').forEach(pane => {
+                pane.classList.remove('active');
+            });
+            
+            // Показываем нужную
+            document.getElementById('tab-' + tabName).classList.add('active');
+            
+            // Загружаем данные
+            if (tabName === 'organizations') loadOrganizations();
+            if (tabName === 'codes') loadInviteCodes();
+            if (tabName === 'users') loadUsers();
+        }
         
         // Загрузка организаций
         async function loadOrganizations() {
@@ -439,52 +474,42 @@
             
             const list = document.getElementById('organizations-list');
             list.innerHTML = orgs.map(org => `
-                <div class="card org-card">
-                    <h3>${org.name}</h3>
-                    <p>${org.description || 'Нет описания'}</p>
-                    <div class="stats">
-                        <div class="stat">
+                <div class="order-card">
+                    <div class="org-title">${org.name}</div>
+                    <div class="org-subtitle">${org.description || 'Нет описания'}</div>
+                    <div class="stat-grid">
+                        <div class="stat-item">
                             <div class="stat-label">Пользователей</div>
                             <div class="stat-value">${org.users_count || 0}</div>
                         </div>
-                        <div class="stat">
-                            <div class="stat-label">Всего кодов</div>
+                        <div class="stat-item">
+                            <div class="stat-label">Кодов</div>
                             <div class="stat-value">${org.total_codes || 0}</div>
                         </div>
-                        <div class="stat">
+                        <div class="stat-item">
                             <div class="stat-label">Использовано</div>
                             <div class="stat-value">${org.used_codes || 0}</div>
                         </div>
                     </div>
-                    <div class="actions">
-                        <button class="btn btn-primary" onclick="viewOrgCodes(${org.id})">Коды</button>
-                        <button class="btn btn-${org.is_active ? 'secondary' : 'success'}" 
-                                onclick="toggleOrgActive(${org.id}, ${!org.is_active})">
+                    <div style="display: flex; gap: 8px; margin-top: 12px;">
+                        <button class="btn btn-primary" onclick="viewOrgCodes(${org.id})" style="flex: 1;">Коды</button>
+                        <button class="btn btn-${org.is_active ? 'secondary' : 'success'}" onclick="toggleOrgActive(${org.id}, ${!org.is_active})" style="flex: 1;">
                             ${org.is_active ? 'Деактивировать' : 'Активировать'}
                         </button>
                     </div>
                 </div>
             `).join('');
             
-            // Обновляем фильтр в секции кодов
             updateOrgFilter(orgs);
         }
         
         function updateOrgFilter(orgs) {
-            const filter = document.getElementById('org-filter');
-            const genSelect = document.getElementById('gen-org-id');
-            const userFilter = document.getElementById('user-org-filter');
-            
-            const options = orgs.map(org => 
-                `<option value="${org.id}">${org.name}</option>`
-            ).join('');
-            
-            filter.innerHTML = '<option value="">Все организации</option>' + options;
-            genSelect.innerHTML = options;
-            userFilter.innerHTML = '<option value="">Все организации</option>' + options;
+            const options = orgs.map(org => `<option value="${org.id}">${org.name}</option>`).join('');
+            document.getElementById('org-filter').innerHTML = '<option value="">Все организации</option>' + options;
+            document.getElementById('gen-org-id').innerHTML = options;
+            document.getElementById('user-org-filter').innerHTML = '<option value="">Все организации</option>' + options;
         }
         
-        // Создание организации
         function showAddOrgModal() {
             document.getElementById('add-org-modal').classList.add('show');
         }
@@ -506,6 +531,8 @@
             
             if (response.ok) {
                 closeModal('add-org-modal');
+                document.getElementById('org-name').value = '';
+                document.getElementById('org-description').value = '';
                 loadOrganizations();
             } else {
                 const error = await response.json();
@@ -524,11 +551,10 @@
             const list = document.getElementById('codes-list');
             
             if (codes.length === 0) {
-                list.innerHTML = '<div class="card"><p>Кодов пока нет</p></div>';
+                list.innerHTML = '<div class="order-card"><div style="text-align: center; color: var(--tg-theme-hint-color);">Кодов пока нет</div></div>';
                 return;
             }
             
-            // Группируем по организациям
             const grouped = {};
             codes.forEach(code => {
                 if (!grouped[code.organization_name]) {
@@ -538,13 +564,13 @@
             });
             
             list.innerHTML = Object.entries(grouped).map(([orgName, orgCodes]) => `
-                <div class="card">
-                    <h3>${orgName}</h3>
-                    <div class="codes-grid">
+                <div class="order-card">
+                    <div class="org-title">${orgName}</div>
+                    <div class="org-subtitle">${orgCodes.length} кодов</div>
+                    <div class="codes-container">
                         ${orgCodes.map(code => `
-                            <div class="code-item ${code.used_by_telegram_id ? 'used' : ''}">
+                            <div class="code-badge ${code.used_by_telegram_id ? 'used' : ''}" onclick="copyCode('${code.code}')">
                                 ${code.code}
-                                ${code.used_by_name ? '<br><small>' + code.used_by_name + '</small>' : ''}
                             </div>
                         `).join('')}
                     </div>
@@ -552,7 +578,11 @@
             `).join('');
         }
         
-        // Генерация кодов
+        function copyCode(code) {
+            navigator.clipboard.writeText(code);
+            tg.showAlert('Код скопирован: ' + code);
+        }
+        
         function showGenerateCodesModal() {
             document.getElementById('generate-codes-modal').classList.add('show');
         }
@@ -571,7 +601,7 @@
             if (response.ok) {
                 closeModal('generate-codes-modal');
                 loadInviteCodes();
-                alert(`Сгенерировано ${count} кодов`);
+                tg.showAlert(`Сгенерировано ${count} кодов`);
             } else {
                 const error = await response.json();
                 alert(error.error || 'Ошибка генерации');
@@ -579,7 +609,8 @@
         }
         
         function viewOrgCodes(orgId) {
-            document.querySelector('[data-tab="codes"]').click();
+            // Переключаем на вкладку кодов
+            document.querySelectorAll('.menu-item')[1].click();
             document.getElementById('org-filter').value = orgId;
             loadInviteCodes();
         }
@@ -596,12 +627,7 @@
             }
         }
         
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('show');
-        }
-        
-        // ========== УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ ==========
-        
+        // Загрузка пользователей
         async function loadUsers() {
             const orgId = document.getElementById('user-org-filter').value;
             const url = `${API_BASE}/api/admin/users?telegram_id=${telegram_id}${orgId ? '&organization_id=' + orgId : ''}`;
@@ -611,15 +637,14 @@
             
             const list = document.getElementById('users-list');
             list.innerHTML = users.map(user => `
-                <div class="card">
-                    <h3>${user.name || 'Без имени'} ${user.is_banned ? '🚫' : ''}</h3>
-                    <p><strong>Телефон:</strong> ${user.phone_number}</p>
-                    <p><strong>Роль:</strong> ${user.role === 'customer' ? 'Заказчик' : 'Водитель'}</p>
-                    <p><strong>Организация:</strong> ${user.organization_name || 'Не привязан'}</p>
-                    <p><strong>Инвайт-код:</strong> ${user.invite_code || 'Нет'}</p>
-                    <p><strong>Зарегистрирован:</strong> ${new Date(user.created_at).toLocaleString('ru-RU')}</p>
-                    <div class="actions">
-                        <button class="btn btn-primary" onclick="editUser(${user.telegram_id})">Редактировать</button>
+                <div class="order-card" onclick="editUser(${user.telegram_id})">
+                    <div class="user-card">
+                        <div class="user-avatar">${(user.name || 'U')[0].toUpperCase()}</div>
+                        <div class="user-info">
+                            <div class="user-name">${user.name || 'Без имени'} ${user.is_banned ? '🚫' : ''}</div>
+                            <div class="user-phone">${user.phone_number} • ${user.role === 'customer' ? 'Заказчик' : 'Водитель'}</div>
+                            <div class="user-phone">${user.organization_name || 'Не привязан'}</div>
+                        </div>
                     </div>
                 </div>
             `).join('');
@@ -632,16 +657,12 @@
             
             if (!user) return;
             
-            // Заполняем форму
             document.getElementById('edit-user-telegram-id').value = user.telegram_id;
             document.getElementById('edit-user-name').value = user.name || '';
             document.getElementById('edit-user-phone').value = user.phone_number;
             document.getElementById('edit-user-role').value = user.role === 'customer' ? 'Заказчик' : 'Водитель';
-            document.getElementById('edit-user-invite-code').value = user.invite_code || 'Нет';
-            document.getElementById('edit-user-created').value = new Date(user.created_at).toLocaleString('ru-RU');
             document.getElementById('edit-user-banned').checked = !!user.is_banned;
             
-            // Заполняем селект организаций
             const orgResponse = await fetch(`${API_BASE}/api/admin/organizations?telegram_id=${telegram_id}`);
             const orgs = await orgResponse.json();
             const orgSelect = document.getElementById('edit-user-org');
@@ -665,7 +686,7 @@
             if (response.ok) {
                 closeModal('edit-user-modal');
                 loadUsers();
-                alert('Пользователь обновлен');
+                tg.showAlert('Пользователь обновлен');
             } else {
                 const error = await response.json();
                 alert(error.error || 'Ошибка сохранения');
@@ -684,31 +705,18 @@
             if (response.ok) {
                 closeModal('edit-user-modal');
                 loadUsers();
-                alert('Пользователь удален');
+                tg.showAlert('Пользователь удален');
             } else {
                 alert('Ошибка удаления');
             }
         }
         
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+        
         // Инициализация
         loadOrganizations();
-        
-        // Обновляем обработчики табов
-        document.querySelectorAll('.admin-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                const tabName = tab.dataset.tab;
-                
-                document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
-                
-                tab.classList.add('active');
-                document.getElementById(tabName + '-section').classList.add('active');
-                
-                if (tabName === 'organizations') loadOrganizations();
-                if (tabName === 'codes') loadInviteCodes();
-                if (tabName === 'users') loadUsers();
-            });
-        });
     </script>
 </body>
 </html>
