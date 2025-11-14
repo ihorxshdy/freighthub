@@ -21,10 +21,12 @@ function applyTelegramTheme() {
         }
     }
     
-    // Применяем класс
+    // Применяем класс к body и html
     if (isDark) {
+        document.documentElement.classList.add('theme-dark');
         document.body.classList.add('theme-dark');
     } else {
+        document.documentElement.classList.remove('theme-dark');
         document.body.classList.remove('theme-dark');
     }
 }
