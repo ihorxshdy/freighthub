@@ -112,7 +112,7 @@ body {
     width: 100% !important;
     height: 100vh !important;
     background-color: #f5f5f7;
-    background-image: url('../images/background_day.jpg') !important;
+    background-image: url('/static/images/background_day.jpg') !important;
     background-size: cover !important;
     background-position: center !important;
     background-repeat: no-repeat !important;
@@ -128,7 +128,7 @@ body {
     
     #fixed-background {
         background-color: #000000;
-        background-image: url('../images/background_night.jpg');
+        background-image: url('/static/images/background_night.jpg') !important;
     }
 }
 
@@ -138,7 +138,7 @@ body.theme-dark {
 
 body.theme-dark #fixed-background {
     background-color: #000000;
-    background-image: url('../images/background_night.jpg');
+    background-image: url('/static/images/background_night.jpg') !important;
 }
 
 #app {

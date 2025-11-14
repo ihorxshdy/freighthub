@@ -33,7 +33,7 @@ function applyTelegramTheme() {
     // Применяем фон к fixed-background элементу
     const bgElement = document.getElementById('fixed-background');
     if (bgElement) {
-        const bgImage = isDark ? 'static/images/background_night.jpg' : 'static/images/background_day.jpg';
+        const bgImage = isDark ? '/static/images/background_night.jpg' : '/static/images/background_day.jpg';
         bgElement.style.backgroundImage = `url('${bgImage}')`;
     }
 }
