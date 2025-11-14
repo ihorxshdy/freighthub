@@ -464,7 +464,7 @@
                 <input type="hidden" id="edit-user-telegram-id">
                 <div class="form-group">
                     <label class="form-label">Имя:</label>
-                    <input type="text" id="edit-user-name" class="form-control" disabled>
+                    <input type="text" id="edit-user-name" class="form-control" placeholder="Имя пользователя">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Телефон:</label>
@@ -744,11 +744,12 @@
             const orgValue = document.getElementById('edit-user-org').value;
             const organization_id = orgValue === "" ? null : parseInt(orgValue);
             const is_banned = document.getElementById('edit-user-banned').checked;
+            const name = document.getElementById('edit-user-name').value.trim();
             
             const response = await fetch(`${API_BASE}/api/admin/users/${userTelegramId}?telegram_id=${telegram_id}`, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({organization_id, is_banned})
+                body: JSON.stringify({organization_id, is_banned, name})
             });
             
             if (response.ok) {

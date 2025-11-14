@@ -409,7 +409,7 @@ def setup_admin_routes(app, get_db_connection):
     
     @app.route('/api/admin/users/<int:user_telegram_id>', methods=['PUT'])
     def update_user(user_telegram_id):
-        """Обновить пользователя (привязка к организации, бан)"""
+        """Обновить пользователя (привязка к организации, бан, имя)"""
         telegram_id = request.args.get('telegram_id')
         data = request.json
         
@@ -422,11 +422,21 @@ def setup_admin_routes(app, get_db_connection):
         params = []
         
         if 'organization_id' in data:
-            updates.append('organization_id = ?')
-            params.append(data['organization_id'])
+            # Обрабатываем null/None правильно
+            org_id = data['organization_id']
+            if org_id is None or org_id == '':
+                updates.append('organization_id = NULL')
+            else:
+                updates.append('organization_id = ?')
+                params.append(org_id)
+        
         if 'is_banned' in data:
             updates.append('is_banned = ?')
             params.append(1 if data['is_banned'] else 0)
+        
+        if 'name' in data:
+            updates.append('name = ?')
+            params.append(data['name'])
         
         if updates:
             params.append(user_telegram_id)
