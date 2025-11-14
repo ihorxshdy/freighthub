@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Админ Панель - FreightHub</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         .admin-container {
@@ -264,6 +264,9 @@
         const tg = window.Telegram.WebApp;
         const telegram_id = tg.initDataUnsafe?.user?.id;
         
+        // Определяем базовый путь API (относительно текущей страницы)
+        const API_BASE = window.location.pathname.replace('/admin', '');
+        
         if (!telegram_id) {
             alert('Ошибка: не удалось получить telegram_id');
         }
@@ -289,7 +292,7 @@
         
         // Загрузка организаций
         async function loadOrganizations() {
-            const response = await fetch(`/api/admin/organizations?telegram_id=${telegram_id}`);
+            const response = await fetch(`${API_BASE}/api/admin/organizations?telegram_id=${telegram_id}`);
             const orgs = await response.json();
             
             const list = document.getElementById('organizations-list');
@@ -351,7 +354,7 @@
                 return;
             }
             
-            const response = await fetch(`/api/admin/organizations?telegram_id=${telegram_id}`, {
+            const response = await fetch(`${API_BASE}/api/admin/organizations?telegram_id=${telegram_id}`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({name, description})
@@ -369,7 +372,7 @@
         // Загрузка кодов
         async function loadInviteCodes() {
             const orgId = document.getElementById('org-filter').value;
-            const url = `/api/admin/invite-codes?telegram_id=${telegram_id}${orgId ? '&organization_id=' + orgId : ''}`;
+            const url = `${API_BASE}/api/admin/invite-codes?telegram_id=${telegram_id}${orgId ? '&organization_id=' + orgId : ''}`;
             
             const response = await fetch(url);
             const codes = await response.json();
@@ -415,7 +418,7 @@
             const count = parseInt(document.getElementById('gen-count').value);
             const expires_days = document.getElementById('gen-expires').value || null;
             
-            const response = await fetch(`/api/admin/invite-codes/generate?telegram_id=${telegram_id}`, {
+            const response = await fetch(`${API_BASE}/api/admin/invite-codes/generate?telegram_id=${telegram_id}`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({organization_id, count, expires_days})
@@ -438,7 +441,7 @@
         }
         
         async function toggleOrgActive(orgId, isActive) {
-            const response = await fetch(`/api/admin/organizations/${orgId}?telegram_id=${telegram_id}`, {
+            const response = await fetch(`${API_BASE}/api/admin/organizations/${orgId}?telegram_id=${telegram_id}`, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({is_active: isActive})
