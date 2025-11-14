@@ -413,38 +413,52 @@ def setup_admin_routes(app, get_db_connection):
         telegram_id = request.args.get('telegram_id')
         data = request.json
         
+        print(f"[ADMIN] Update user {user_telegram_id}, data: {data}")
+        
         if not telegram_id or not is_admin(telegram_id):
             return jsonify({'error': 'Access denied'}), 403
         
         conn = get_db_connection()
         
-        updates = []
-        params = []
-        
-        if 'organization_id' in data:
-            # Обрабатываем null/None правильно
-            org_id = data['organization_id']
-            if org_id is None or org_id == '':
-                updates.append('organization_id = NULL')
-            else:
-                updates.append('organization_id = ?')
-                params.append(org_id)
-        
-        if 'is_banned' in data:
-            updates.append('is_banned = ?')
-            params.append(1 if data['is_banned'] else 0)
-        
-        if 'name' in data:
-            updates.append('name = ?')
-            params.append(data['name'])
-        
-        if updates:
+        try:
+            # Строим SET clause и параметры
+            set_parts = []
+            params = []
+            
+            if 'organization_id' in data:
+                org_id = data['organization_id']
+                if org_id is None or org_id == '':
+                    set_parts.append('organization_id = NULL')
+                else:
+                    set_parts.append('organization_id = ?')
+                    params.append(org_id)
+            
+            if 'is_banned' in data:
+                set_parts.append('is_banned = ?')
+                params.append(1 if data['is_banned'] else 0)
+            
+            if 'name' in data:
+                set_parts.append('name = ?')
+                params.append(data['name'])
+            
+            if not set_parts:
+                conn.close()
+                return jsonify({'error': 'No fields to update'}), 400
+            
+            # Добавляем WHERE параметр
             params.append(user_telegram_id)
-            conn.execute(
-                f"UPDATE users SET {', '.join(updates)} WHERE telegram_id = ?",
-                params
-            )
+            
+            # Выполняем UPDATE
+            query = f"UPDATE users SET {', '.join(set_parts)} WHERE telegram_id = ?"
+            print(f"[ADMIN] Executing query: {query}")
+            print(f"[ADMIN] Params: {params}")
+            conn.execute(query, params)
             conn.commit()
+            print(f"[ADMIN] User {user_telegram_id} updated successfully")
+        except Exception as e:
+            conn.close()
+            print(f"[ADMIN] Error updating user: {e}")
+            return jsonify({'error': str(e)}), 500
         
         user = conn.execute('''
             SELECT u.*, o.name as organization_name, ic.code as invite_code
