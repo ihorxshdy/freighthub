@@ -15,8 +15,12 @@ COPY . .
 # Создаём папку для БД (теперь монтируется в /app/data)
 RUN mkdir -p /app/data
 
+# Копируем и делаем исполняемым entrypoint скрипт
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 # Открываем порт
 EXPOSE 5000
 
-# Запускаем webapp
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
+# Запускаем через entrypoint для применения миграций
+CMD ["/app/entrypoint.sh"]
