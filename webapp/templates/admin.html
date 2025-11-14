@@ -18,9 +18,9 @@
         
         /* Кастомный header для админки */
         .admin-header {
-            padding: 16px;
+            padding: 12px 16px;
             display: flex;
-            flex-direction: column;
+            align-items: center;
             gap: 12px;
             position: sticky;
             top: 0;
@@ -42,7 +42,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            width: fit-content;
+            flex-shrink: 0;
             box-shadow: 0 2px 8px var(--glass-shadow);
         }
         
@@ -56,17 +56,19 @@
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            padding: 16px 20px;
-            box-shadow: 0 4px 16px var(--glass-shadow);
+            border-radius: 12px;
+            padding: 10px 16px;
+            box-shadow: 0 2px 8px var(--glass-shadow);
+            flex: 1;
+            text-align: center;
         }
         
         .admin-title-card h1 {
-            font-size: 28px;
-            font-weight: 700;
+            font-size: 17px;
+            font-weight: 600;
             margin: 0;
             color: var(--tg-theme-text-color);
-            letter-spacing: -0.5px;
+            letter-spacing: -0.3px;
         }
         
         .stat-grid {
@@ -739,7 +741,8 @@
         
         async function saveUser() {
             const userTelegramId = document.getElementById('edit-user-telegram-id').value;
-            const organization_id = document.getElementById('edit-user-org').value || null;
+            const orgValue = document.getElementById('edit-user-org').value;
+            const organization_id = orgValue === "" ? null : parseInt(orgValue);
             const is_banned = document.getElementById('edit-user-banned').checked;
             
             const response = await fetch(`${API_BASE}/api/admin/users/${userTelegramId}?telegram_id=${telegram_id}`, {
